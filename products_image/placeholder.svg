@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-label="Anh san pham dang cap nhat">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#18212a"/>
+      <stop offset="1" stop-color="#3a2417"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0a060"/>
+      <stop offset="1" stop-color="#e8651a"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" fill="url(#bg)"/>
+  <circle cx="400" cy="340" r="120" fill="none" stroke="url(#line)" stroke-width="18" opacity=".9"/>
+  <path d="M220 570c60-120 120-180 180-180s120 60 180 180" fill="none" stroke="url(#line)" stroke-width="18" stroke-linecap="round" opacity=".9"/>
+  <text x="400" y="650" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#ffe4ca">DAC SAN NHA DAN</text>
+  <text x="400" y="700" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#f6c39c" opacity=".85">Anh dang cap nhat</text>
+</svg>

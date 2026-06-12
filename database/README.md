@@ -26,7 +26,7 @@ Important: `database.sql` drops the current baseline tables and views before rec
 1. Start Apache and MySQL from XAMPP Control Panel.
 2. Open `http://localhost/phpmyadmin`.
 3. Open the Import tab.
-4. Choose `C:\xampp\htdocs\Dacsan\php-modular\database\database.sql`.
+4. Choose `C:\xampp\htdocs\Dacsan\database\database.sql`.
 5. Keep charset as `utf8mb4` when available.
 6. Click Import.
 
@@ -35,18 +35,18 @@ Important: `database.sql` drops the current baseline tables and views before rec
 From PowerShell:
 
 ```powershell
-C:\xampp\mysql\bin\mysql.exe -h 127.0.0.1 -P 3306 -u root < C:\xampp\htdocs\Dacsan\php-modular\database\database.sql
+C:\xampp\mysql\bin\mysql.exe -h 127.0.0.1 -P 3306 -u root < C:\xampp\htdocs\Dacsan\database\database.sql
 ```
 
 If your MySQL user has a password:
 
 ```powershell
-C:\xampp\mysql\bin\mysql.exe -h 127.0.0.1 -P 3306 -u root -p < C:\xampp\htdocs\Dacsan\php-modular\database\database.sql
+C:\xampp\mysql\bin\mysql.exe -h 127.0.0.1 -P 3306 -u root -p < C:\xampp\htdocs\Dacsan\database\database.sql
 ```
 
 ## App Database Config
 
-The app reads database settings from `php-modular/config/database.php`.
+The app reads database settings from `config/database.php`.
 
 Default local settings:
 
@@ -68,13 +68,7 @@ Expected core database objects:
 - 18 base tables
 - 2 views
 
-Run the smoke test:
-
-```powershell
-C:\xampp\php\php.exe C:\xampp\htdocs\Dacsan\php-modular\tests\db_smoke.php
-```
-
-Or verify manually in MySQL:
+Verify manually in MySQL:
 
 ```sql
 SELECT COUNT(*) AS table_count
@@ -95,7 +89,7 @@ SHOW FULL TABLES FROM dac_san_nha_dan;
 With the PHP built-in server:
 
 ```powershell
-cd C:\xampp\htdocs\Dacsan\php-modular
+cd C:\xampp\htdocs\Dacsan
 C:\xampp\php\php.exe -S 127.0.0.1:8765 router.php
 ```
 

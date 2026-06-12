@@ -4,7 +4,7 @@ DirectoryIndex public/index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    RewriteRule ^(app|config|views|database|tests|storage)(/|$) - [F,L]
+    RewriteRule ^(app|config|views|database|storage)(/|$) - [F,L]
 
     RewriteRule ^assets/(.*)$ public/assets/$1 [L]
 

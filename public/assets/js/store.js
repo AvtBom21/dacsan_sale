@@ -433,7 +433,15 @@ async function submitCheckout(event) {
     }
 }
 
-function scrollToSection(sectionId) {
+const SECTION_IDS = ['ch1', 'ch2', 'ch3', 'ch4'];
+const SNAP_DURATION_MS = 760;
+const SNAP_IDLE_MS = 130;
+let isSectionSnapping = false;
+let sectionSnapTimer = 0;
+let touchStartX = 0;
+let touchStartY = 0;
+
+function normalizeSectionId(sectionId) {
     const aliases = {
         hero: 'ch1',
         story: 'ch2',
@@ -444,9 +452,78 @@ function scrollToSection(sectionId) {
         products: 'ch3',
         sanpham: 'ch3'
     };
-    const targetId = aliases[sectionId] || sectionId || 'ch1';
-    document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return aliases[sectionId] || sectionId || 'ch1';
+}
+
+function updateChapterActiveState(activeId) {
+    const targetId = activeId || currentSectionId();
+    SECTION_IDS.forEach(id => {
+        const section = document.getElementById(id);
+        if (!section) return;
+        const isActive = id === targetId;
+        section.classList.toggle('is-active', isActive);
+        section.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    });
+}
+
+function isOverlayInteraction(target) {
+    return Boolean(target?.closest?.('.modal.active, .cart-sidebar.open, .nav-links'));
+}
+
+function currentSectionId() {
+    const viewportMiddle = window.scrollY + window.innerHeight / 2;
+    let closestId = 'ch1';
+    let closestDistance = Number.POSITIVE_INFINITY;
+    SECTION_IDS.forEach(id => {
+        const section = document.getElementById(id);
+        if (!section) return;
+        const sectionMiddle = section.offsetTop + section.offsetHeight / 2;
+        const distance = Math.abs(sectionMiddle - viewportMiddle);
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closestId = id;
+        }
+    });
+    return closestId;
+}
+
+function scrollToSection(sectionId) {
+    const targetId = normalizeSectionId(sectionId);
+    const target = document.getElementById(targetId);
+    if (target) {
+        isSectionSnapping = true;
+        updateChapterActiveState(targetId);
+        window.scrollTo({ top: target.offsetTop, behavior: 'smooth' });
+        window.clearTimeout(sectionSnapTimer);
+        sectionSnapTimer = window.setTimeout(() => {
+            isSectionSnapping = false;
+            updateChapterActiveState(targetId);
+        }, SNAP_DURATION_MS);
+    }
     toggleMobileNav(false);
+}
+
+function snapToAdjacentSection(direction) {
+    const activeId = currentSectionId();
+    const currentIndex = SECTION_IDS.indexOf(activeId);
+    const nextIndex = Math.max(0, Math.min(SECTION_IDS.length - 1, currentIndex + direction));
+    if (nextIndex === currentIndex) {
+        scrollToSection(activeId);
+        return;
+    }
+    scrollToSection(SECTION_IDS[nextIndex]);
+}
+
+function snapToNearestSection() {
+    if (isSectionSnapping) return;
+    const targetId = currentSectionId();
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    if (Math.abs(window.scrollY - target.offsetTop) < 4) {
+        updateChapterActiveState(targetId);
+        return;
+    }
+    scrollToSection(targetId);
 }
 
 function moveProductRail(railId, direction) {
@@ -491,4 +568,55 @@ document.addEventListener('keydown', event => {
     }
 });
 
+let activeSectionTicking = false;
+window.addEventListener('scroll', () => {
+    if (activeSectionTicking) return;
+    activeSectionTicking = true;
+    window.requestAnimationFrame(() => {
+        updateChapterActiveState();
+        activeSectionTicking = false;
+    });
+    if (!isSectionSnapping) {
+        window.clearTimeout(sectionSnapTimer);
+        sectionSnapTimer = window.setTimeout(snapToNearestSection, SNAP_IDLE_MS);
+    }
+}, { passive: true });
+
 document.addEventListener('DOMContentLoaded', initStorefront);
+document.addEventListener('DOMContentLoaded', () => updateChapterActiveState('ch1'));
+
+window.addEventListener('wheel', event => {
+    if (isOverlayInteraction(event.target)) return;
+    if (Math.abs(event.deltaY) < 28 || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    event.preventDefault();
+    if (isSectionSnapping) return;
+    snapToAdjacentSection(event.deltaY > 0 ? 1 : -1);
+}, { passive: false });
+
+window.addEventListener('touchstart', event => {
+    if (!event.touches.length) return;
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+}, { passive: true });
+
+window.addEventListener('touchend', event => {
+    if (isOverlayInteraction(event.target) || !event.changedTouches.length || isSectionSnapping) return;
+    const deltaX = event.changedTouches[0].clientX - touchStartX;
+    const deltaY = event.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(deltaY) < 46 || Math.abs(deltaX) > Math.abs(deltaY)) return;
+    snapToAdjacentSection(deltaY < 0 ? 1 : -1);
+}, { passive: true });
+
+document.addEventListener('keydown', event => {
+    if (isOverlayInteraction(event.target)) return;
+    const keys = {
+        PageDown: 1,
+        ArrowDown: 1,
+        Space: 1,
+        PageUp: -1,
+        ArrowUp: -1
+    };
+    if (!(event.key in keys)) return;
+    event.preventDefault();
+    snapToAdjacentSection(keys[event.key]);
+});

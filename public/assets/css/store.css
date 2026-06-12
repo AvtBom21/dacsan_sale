@@ -34,18 +34,24 @@
 
 html {
     width: 100%;
+    min-height: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    overscroll-behavior-y: none;
     scroll-behavior: smooth;
     scroll-snap-type: y mandatory;
+    scroll-padding-top: 0;
 }
 
 body {
     margin: 0;
     width: 100%;
+    min-height: 100%;
     min-height: 100vh;
+    min-height: 100dvh;
     max-width: 100%;
     overflow-x: hidden;
+    overscroll-behavior-y: none;
     background: #020202;
     color: var(--text);
     font-family: var(--font-main);
@@ -205,7 +211,9 @@ button {
 }
 
 main {
+    width: 100%;
     min-height: 100vh;
+    min-height: 400svh;
 }
 
 section {
@@ -215,8 +223,10 @@ section {
 .chapter {
     width: 100%;
     max-width: 100%;
+    height: 100vh;
     height: 100dvh;
     min-height: 100svh;
+    max-height: 100dvh;
     padding: var(--section-y-top) var(--section-x) var(--section-y-bottom);
     overflow: hidden;
     scroll-snap-align: start;
@@ -389,8 +399,10 @@ h1 {
     grid-template-columns: minmax(0, 0.82fr) minmax(320px, 0.9fr);
     gap: clamp(24px, 5vw, 72px);
     align-items: center;
+    height: 100vh;
     height: 100dvh;
     min-height: 100svh;
+    max-height: 100dvh;
     background:
         radial-gradient(circle at 20% 20%, rgba(242, 168, 59, 0.16), transparent 24rem),
         linear-gradient(135deg, #10150f, #071016 58%, #071f27);
@@ -540,7 +552,7 @@ h1 {
 .product-showcase {
     width: 100%;
     max-width: 100%;
-    height: clamp(360px, calc(100dvh - 500px), 410px);
+    height: clamp(410px, calc(100dvh - 455px), 500px);
     min-height: 0;
     display: flex;
     gap: clamp(16px, 1.6vw, 28px);
@@ -560,8 +572,8 @@ h1 {
 
 .product-card {
     width: auto;
-    max-width: 340px;
-    flex: 0 0 clamp(280px, 18.5vw, 340px);
+    max-width: 410px;
+    flex: 0 0 clamp(320px, 22vw, 410px);
     min-width: 0;
     height: 100%;
     scroll-snap-align: start;
@@ -1089,7 +1101,7 @@ option {
     }
 
     .product-showcase {
-        height: clamp(340px, 45dvh, 365px);
+        height: clamp(392px, 52dvh, 410px);
     }
 
     .rail-controls {
@@ -1097,13 +1109,14 @@ option {
     }
 
     .product-card {
+        flex-basis: clamp(300px, 23vw, 382px);
         grid-template-rows: auto auto minmax(2.45em, auto) auto auto auto auto;
         gap: 7px;
         padding: 9px;
     }
 
     .product-card img {
-        aspect-ratio: 2.35 / 1;
+        aspect-ratio: 16 / 9;
     }
 
     .product-card h3 {
@@ -1223,8 +1236,10 @@ option {
     .hero-section,
     .story-section,
     .region-section {
+        height: 100vh;
         height: 100dvh;
         min-height: 100svh;
+        max-height: 100dvh;
         padding: var(--section-y-top) var(--section-x) var(--section-y-bottom);
     }
 
@@ -1298,7 +1313,7 @@ option {
 
     .product-showcase {
         width: 100%;
-        height: clamp(385px, calc(100dvh - 315px), 440px);
+        height: clamp(410px, calc(100dvh - 305px), 505px);
         min-height: 0;
         margin-left: 0;
         padding-left: 0;
@@ -1309,13 +1324,13 @@ option {
     .product-card {
         width: auto;
         max-width: none;
-        flex: 0 0 min(84vw, 340px);
+        flex: 0 0 min(90vw, 380px);
         gap: 8px;
         padding: 12px;
     }
 
     .product-card img {
-        aspect-ratio: 2.35 / 1;
+        aspect-ratio: 16 / 9;
     }
 
     .product-card h3 {
@@ -1402,6 +1417,14 @@ option {
     }
 
     .product-showcase {
-        height: clamp(360px, calc(100dvh - 335px), 405px);
+        height: clamp(386px, calc(100dvh - 315px), 430px);
+    }
+
+    .product-card {
+        flex-basis: min(88vw, 350px);
+    }
+
+    .product-card img {
+        aspect-ratio: 16 / 9;
     }
 }

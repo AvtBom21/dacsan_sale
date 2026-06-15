@@ -4,7 +4,7 @@ This folder contains the current core MySQL/MariaDB schema and seed baseline for
 
 ## Files
 
-- `database.sql`: copied from the root `dac_san_nha_dan_schema_seed.sql`.
+- `database.sql`: current schema and seed baseline used by the app.
 - `README.md`: database setup and verification notes.
 
 ## Create And Import Database

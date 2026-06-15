@@ -328,16 +328,30 @@ final class CartQuoteService
     {
         $placeholder = 'products_image/placeholder.svg';
         $safePath = $this->safeImagePath($path);
-        $exists = is_file($this->legacyRootPath . '/' . $safePath);
-        $urlPath = $exists ? $safePath : $placeholder;
+        $urlPath = $this->existingImagePath($safePath);
+        $exists = is_file($this->legacyRootPath . '/' . $urlPath);
 
         return [
-            'path' => $safePath,
+            'path' => $urlPath,
             'url' => '../' . $urlPath,
             'alt' => $alt,
             'exists' => $exists,
-            'fallback_used' => !$exists,
+            'fallback_used' => $urlPath === $placeholder && $safePath !== $placeholder,
         ];
+    }
+
+    private function existingImagePath(string $safePath): string
+    {
+        if (is_file($this->legacyRootPath . '/' . $safePath)) {
+            return $safePath;
+        }
+
+        $flatPath = 'products_image/' . basename($safePath);
+        if ($flatPath !== $safePath && is_file($this->legacyRootPath . '/' . $flatPath)) {
+            return $flatPath;
+        }
+
+        return 'products_image/placeholder.svg';
     }
 
     private function safeImagePath(string $path): string

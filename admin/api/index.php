@@ -26,6 +26,7 @@ use DacSanNhaDan\Services\CheckoutService;
 use DacSanNhaDan\Services\InventoryService;
 use DacSanNhaDan\Services\OrderService;
 use DacSanNhaDan\Services\PurchasePlanService;
+use DacSanNhaDan\Services\UploadService;
 use DacSanNhaDan\Support\Logger;
 
 $config = require dirname(__DIR__, 2) . '/app/bootstrap.php';
@@ -38,7 +39,9 @@ try {
     $authorization = new AdminAuthorizationService();
     $auth = new AdminAuthService(new AdminUserRepository($pdo), $authorization);
     $admin = new AdminService(new AdminDashboardRepository($pdo));
-    $adminProducts = new AdminProductService($pdo, new AdminProductRepository($pdo));
+    $adminProductRepository = new AdminProductRepository($pdo);
+    $adminProducts = new AdminProductService($pdo, $adminProductRepository);
+    $uploads = new UploadService(dirname(__DIR__, 2));
 
     if ($action === '' || $action === 'health') {
         Response::ok([
@@ -144,6 +147,95 @@ try {
             ((int) ($body['is_active'] ?? 0)) === 1
         );
         Response::ok(['message' => 'Đã cập nhật trạng thái sản phẩm.']);
+        return;
+    }
+
+    if ($action === 'product-image-upload') {
+        admin_api_require_method('POST');
+        Csrf::requireAdminToken(admin_api_csrf([]));
+        $productId = admin_api_post_id('product_id', 40);
+        if (!$adminProductRepository->productExists($productId)) {
+            throw new AppException('KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m.', 404);
+        }
+        $imageAlt = admin_api_post_text('image_alt', 255);
+        $isBase = admin_api_post_flag('is_base');
+        $sortOrder = admin_api_post_non_negative_int('sort_order');
+        $file = admin_api_uploaded_file('image');
+
+        $image = $uploads->storeImageAndPersist(
+            $file,
+            $productId,
+            function (array $stored) use (
+                $pdo,
+                $adminProductRepository,
+                $productId,
+                $imageAlt,
+                $isBase,
+                $sortOrder
+            ): array {
+                $pdo->beginTransaction();
+                try {
+                    if ($isBase === 1) {
+                        $adminProductRepository->clearActiveBaseImages($productId);
+                    }
+                    $imageId = $adminProductRepository->insertImage([
+                        'product_id' => $productId,
+                        'image_path' => $stored['path'],
+                        'source_url' => '',
+                        'image_alt' => $imageAlt,
+                        'is_base' => $isBase,
+                        'is_active' => 1,
+                        'sort_order' => $sortOrder,
+                    ]);
+                    $image = $adminProductRepository->image($imageId, $productId);
+                    if ($image === null) {
+                        throw new AppException('KhÃ´ng thá»ƒ Ä‘á»c metadata áº£nh vá»«a táº¡o.', 500);
+                    }
+                    $pdo->commit();
+                    return $image;
+                } catch (Throwable $exception) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    throw $exception;
+                }
+            }
+        );
+        Response::ok($image);
+        return;
+    }
+
+    if ($action === 'payment-qr-upload') {
+        admin_api_require_method('POST');
+        Csrf::requireAdminToken(admin_api_csrf([]));
+        $file = admin_api_uploaded_file('image');
+        $result = $uploads->storeImageAndPersist(
+            $file,
+            'payment-qr',
+            function (array $stored) use ($pdo): array {
+                $pdo->beginTransaction();
+                try {
+                    $statement = $pdo->prepare(
+                        'INSERT INTO settings (setting_key, setting_value, note)
+                         VALUES (:setting_key, :setting_value, :note)
+                         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
+                    );
+                    $statement->execute([
+                        'setting_key' => 'bank_qr_image_path',
+                        'setting_value' => $stored['path'],
+                        'note' => 'áº¢nh QR chuyá»ƒn khoáº£n trong products_image',
+                    ]);
+                    $pdo->commit();
+                    return ['path' => $stored['path']];
+                } catch (Throwable $exception) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    throw $exception;
+                }
+            }
+        );
+        Response::ok($result);
         return;
     }
 
@@ -287,6 +379,7 @@ function admin_api_action_permission(string $action): ?string
         'product-detail' => 'products.view',
         'product-save' => 'products.manage',
         'product-active' => 'products.manage',
+        'product-image-upload' => 'products.manage',
         'inventory' => 'inventory.view',
         'po-list' => 'purchase_plans.view',
         'po-detail' => 'purchase_plans.view',
@@ -297,6 +390,7 @@ function admin_api_action_permission(string $action): ?string
         'po-cancel' => 'purchase_plans.manage',
         'settings' => 'settings.view',
         'setting-update' => 'settings.manage',
+        'payment-qr-upload' => 'settings.manage',
     ];
 
     return $permissions[$action] ?? null;
@@ -400,4 +494,73 @@ function admin_api_body_order_ids(array $body): array
     }
 
     return $orderIds;
+}
+
+/** @return array<string, mixed> */
+function admin_api_uploaded_file(string $key): array
+{
+    $file = $_FILES[$key] ?? null;
+    if (!is_array($file)) {
+        throw new AppException('Thiáº¿u file táº£i lÃªn.', 422);
+    }
+    foreach (['name', 'type', 'tmp_name', 'error', 'size'] as $field) {
+        if (!array_key_exists($field, $file) || is_array($file[$field])) {
+            throw new AppException('ThÃ´ng tin file táº£i lÃªn khÃ´ng há»£p lá»‡.', 422);
+        }
+    }
+
+    return $file;
+}
+
+function admin_api_post_id(string $key, int $maxLength = 80): string
+{
+    $value = $_POST[$key] ?? '';
+    if (
+        !is_string($value)
+        || $maxLength < 1
+        || $maxLength > 80
+        || strlen(trim($value)) > $maxLength
+        || preg_match('/^[A-Za-z0-9_-]+$/', trim($value)) !== 1
+    ) {
+        throw new AppException('Tham sá»‘ ' . $key . ' khÃ´ng há»£p lá»‡.', 422);
+    }
+
+    return trim($value);
+}
+
+function admin_api_post_text(string $key, int $maxLength): string
+{
+    $value = $_POST[$key] ?? '';
+    if (!is_string($value) || mb_strlen(trim($value), 'UTF-8') > $maxLength) {
+        throw new AppException('Tham sá»‘ ' . $key . ' khÃ´ng há»£p lá»‡.', 422);
+    }
+
+    return trim($value);
+}
+
+function admin_api_post_flag(string $key): int
+{
+    $value = $_POST[$key] ?? '0';
+    if (!is_string($value) || !in_array($value, ['0', '1'], true)) {
+        throw new AppException('Tham sá»‘ ' . $key . ' khÃ´ng há»£p lá»‡.', 422);
+    }
+
+    return (int) $value;
+}
+
+function admin_api_post_non_negative_int(string $key): int
+{
+    $value = $_POST[$key] ?? '0';
+    if (
+        !is_string($value)
+        || filter_var(
+            $value,
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 0, 'max_range' => 2147483647]]
+        ) === false
+    ) {
+        throw new AppException('Tham sá»‘ ' . $key . ' khÃ´ng há»£p lá»‡.', 422);
+    }
+
+    return (int) $value;
 }

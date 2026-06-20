@@ -104,6 +104,29 @@ $images = $product['images'] ?? [];
             <div><span class="eyebrow">Metadata</span><h2>Hình ảnh</h2></div>
             <button type="button" data-add-image>Thêm ảnh</button>
         </div>
+        <?php if ($product !== null): ?>
+            <div
+                class="upload-panel"
+                data-product-image-upload
+                data-product-id="<?= Formatter::h((string) $product['product_id']) ?>"
+            >
+                <label>Chọn ảnh JPEG/PNG/WebP (tối đa 5 MiB)
+                    <input type="file" accept="image/jpeg,image/png,image/webp" data-upload-file>
+                </label>
+                <label>Mô tả ảnh
+                    <input maxlength="255" data-upload-alt>
+                </label>
+                <label>Thứ tự
+                    <input type="number" min="0" step="1" value="0" data-upload-sort>
+                </label>
+                <label class="check-field"><input type="checkbox" data-upload-base> Đặt làm ảnh chính</label>
+                <button type="button" class="button" data-upload-product-image>Tải ảnh lên</button>
+                <img class="upload-preview" data-upload-preview alt="Xem trước ảnh" hidden>
+                <p class="field-error" data-upload-error hidden></p>
+            </div>
+        <?php else: ?>
+            <p class="form-hint">Lưu sản phẩm trước, sau đó mở lại trang sửa để tải file ảnh trực tiếp.</p>
+        <?php endif; ?>
         <div class="repeat-list" data-image-list>
             <?php foreach ($images as $image): ?>
                 <div class="repeat-row image-row" data-image-row>
@@ -117,7 +140,7 @@ $images = $product['images'] ?? [];
                 </div>
             <?php endforeach; ?>
         </div>
-        <p class="form-hint">Task này chỉ quản lý đường dẫn/URL. Tải file trực tiếp được triển khai ở Task 5.</p>
+        <p class="form-hint">Ảnh bỏ khỏi payload sẽ được chuyển sang ngừng hoạt động, không bị xóa.</p>
     </section>
 
     <section class="form-submit">

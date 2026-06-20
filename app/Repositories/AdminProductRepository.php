@@ -249,6 +249,33 @@ final class AdminProductRepository
         return (int) $this->pdo->lastInsertId();
     }
 
+    public function clearActiveBaseImages(string $productId): void
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE product_images
+             SET is_base = 0
+             WHERE product_id = :product_id AND is_active = 1'
+        );
+        $statement->execute(['product_id' => $productId]);
+    }
+
+    /** @return array<string, mixed>|null */
+    public function image(int $imageId, string $productId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM product_images
+             WHERE image_id = :image_id AND product_id = :product_id
+             LIMIT 1'
+        );
+        $statement->execute([
+            'image_id' => $imageId,
+            'product_id' => $productId,
+        ]);
+        $row = $statement->fetch();
+
+        return $row === false ? null : $row;
+    }
+
     /** @param array<string, mixed> $image */
     public function updateImage(array $image): void
     {

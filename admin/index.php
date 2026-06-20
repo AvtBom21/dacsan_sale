@@ -108,6 +108,7 @@ function admin_navigation_capabilities(
         'orders_transition' => $authorization->allows($role, 'orders.transition'),
         'orders_print' => $authorization->allows($role, 'orders.print'),
         'products_manage' => $authorization->allows($role, 'products.manage'),
+        'settings_manage' => $authorization->allows($role, 'settings.manage'),
     ];
 }
 

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use DacSanNhaDan\Support\Formatter;
+use DacSanNhaDan\Services\UploadService;
 
 $statusLabels = [
     'new' => 'Mới',
@@ -25,7 +26,7 @@ $payment = is_array($data['payment'] ?? null) ? $data['payment'] : [];
 $canTransition = ($capabilities['orders_transition'] ?? false) === true;
 $canPrint = ($capabilities['orders_print'] ?? false) === true;
 $qrPath = trim((string) ($payment['bank_qr_image_path'] ?? ''));
-$qrUrl = $qrPath === ''
+$qrUrl = !UploadService::isSafeLocalImagePath($qrPath)
     ? ''
     : rtrim((string) ($appBase ?? ''), '/') . '/' . ltrim($qrPath, '/');
 

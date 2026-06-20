@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use DacSanNhaDan\Support\Formatter;
+use DacSanNhaDan\Services\UploadService;
 
 $inventory = $data['inventory'] ?? [];
 ?>
@@ -65,7 +66,11 @@ $inventory = $data['inventory'] ?? [];
         <div class="product-gallery">
             <?php foreach ($data['images'] as $image): ?>
                 <figure class="<?= ((int) $image['is_active'] === 1) ? '' : 'is-inactive' ?>">
-                    <img src="<?= Formatter::h($appBase . '/' . ltrim((string) $image['image_path'], '/')) ?>" alt="<?= Formatter::h((string) $image['image_alt']) ?>">
+                    <?php if (UploadService::isSafeLocalImagePath((string) $image['image_path'])): ?>
+                        <img src="<?= Formatter::h($appBase . '/' . $image['image_path']) ?>" alt="<?= Formatter::h((string) $image['image_alt']) ?>">
+                    <?php else: ?>
+                        <div class="field-error">Đường dẫn ảnh không hợp lệ.</div>
+                    <?php endif; ?>
                     <figcaption>
                         <?= Formatter::h((string) $image['image_alt']) ?>
                         <?= ((int) $image['is_base'] === 1) ? ' · Ảnh chính' : '' ?>

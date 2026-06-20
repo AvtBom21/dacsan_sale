@@ -5,6 +5,7 @@ declare(strict_types=1);
 use DacSanNhaDan\Core\AppException;
 use DacSanNhaDan\Repositories\AdminProductRepository;
 use DacSanNhaDan\Services\AdminProductService;
+use DacSanNhaDan\Services\UploadService;
 
 require __DIR__ . '/TestSupport.php';
 
@@ -359,5 +360,207 @@ require __DIR__ . '/../views/admin/product-form.php';
 $formHtml = (string) ob_get_clean();
 assertTrue(str_contains($formHtml, 'data-product-form'), 'Product form should render operational markup.');
 assertFalse(str_contains($formHtml, 'product-delete'), 'Product form must not expose deletion.');
+
+$uploadRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'dsnd-upload-' . bin2hex(random_bytes(6));
+$fixtureDir = $uploadRoot . DIRECTORY_SEPARATOR . 'fixtures';
+mkdir($fixtureDir, 0775, true);
+
+$fixtureBytes = [
+    'jpeg' => base64_decode('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAEf/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9oADAMBAAIAAwAAABAf/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPxB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPxB//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxB//9k=', true),
+    'png' => base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true),
+    'webp' => base64_decode('UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEAAUAmJaQAA3AA/v89WAAAAA==', true),
+];
+
+function uploadFixture(
+    string $fixtureDir,
+    string $name,
+    string $bytes,
+    ?int $reportedSize = null
+): array {
+    $path = $fixtureDir . DIRECTORY_SEPARATOR . $name;
+    file_put_contents($path, $bytes);
+
+    return [
+        'name' => $name,
+        'type' => 'application/octet-stream',
+        'tmp_name' => $path,
+        'error' => UPLOAD_ERR_OK,
+        'size' => $reportedSize ?? filesize($path),
+    ];
+}
+
+function removeDirectoryTree(string $path): void
+{
+    if (!is_dir($path)) {
+        return;
+    }
+    $items = scandir($path) ?: [];
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+        $child = $path . DIRECTORY_SEPARATOR . $item;
+        if (is_dir($child) && !is_link($child)) {
+            removeDirectoryTree($child);
+        } else {
+            unlink($child);
+        }
+    }
+    rmdir($path);
+}
+
+try {
+    $testMover = static function (string $source, string $destination): bool {
+        return rename($source, $destination);
+    };
+    $uploads = new UploadService($uploadRoot, $testMover);
+
+    foreach ($fixtureBytes as $type => $bytes) {
+        assertTrue(is_string($bytes) && $bytes !== '', 'Image fixture must decode.');
+        $stored = $uploads->storeImage(
+            uploadFixture($fixtureDir, 'tiny-' . $type . '.bin', $bytes),
+            '../Sáº£n Pháº©m TEST.php'
+        );
+        assertTrue(
+            preg_match('#^products_image/[a-z0-9-]+_[a-f0-9]{12}\.(jpg|png|webp)$#', $stored['path']) === 1,
+            'Generated upload path should use a safe prefix and random filename.'
+        );
+        assertTrue(is_file($stored['absolute_path']), 'Accepted image should be stored.');
+        $uploadDirectory = realpath($uploadRoot . DIRECTORY_SEPARATOR . 'products_image');
+        $storedRealPath = realpath($stored['absolute_path']);
+        assertTrue(
+            is_string($uploadDirectory)
+                && is_string($storedRealPath)
+                && str_starts_with(
+                    strtolower($storedRealPath),
+                    strtolower(rtrim($uploadDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)
+                ),
+            'Stored image must remain inside products_image.'
+        );
+    }
+
+    $disguised = uploadFixture(
+        $fixtureDir,
+        'shell.jpg',
+        "<?php echo 'not an image';"
+    );
+    assertThrows(
+        fn () => $uploads->storeImage($disguised, 'product'),
+        AppException::class,
+        422
+    );
+
+    $largePath = $fixtureDir . DIRECTORY_SEPARATOR . 'large.png';
+    $largeHandle = fopen($largePath, 'wb');
+    fseek($largeHandle, (5 * 1024 * 1024));
+    fwrite($largeHandle, "\0");
+    fclose($largeHandle);
+    assertThrows(
+        fn () => $uploads->storeImage([
+            'name' => 'large.png',
+            'type' => 'image/png',
+            'tmp_name' => $largePath,
+            'error' => UPLOAD_ERR_OK,
+            'size' => filesize($largePath),
+        ], 'product'),
+        AppException::class,
+        422
+    );
+
+    $failingMover = new UploadService(
+        $uploadRoot,
+        static fn (string $source, string $destination): bool => false
+    );
+    assertThrows(
+        fn () => $failingMover->storeImage(
+            uploadFixture($fixtureDir, 'move-fail.png', $fixtureBytes['png']),
+            'product'
+        ),
+        AppException::class,
+        500
+    );
+
+    $cleanupCandidate = uploadFixture(
+        $fixtureDir,
+        'cleanup.webp',
+        $fixtureBytes['webp']
+    );
+    $storedBeforeFailure = null;
+    assertThrows(
+        function () use ($uploads, $cleanupCandidate, &$storedBeforeFailure, $pdo): void {
+            $uploads->storeImageAndPersist(
+                $cleanupCandidate,
+                'product',
+                static function (array $stored) use (&$storedBeforeFailure, $pdo): void {
+                    $storedBeforeFailure = $stored;
+                    $pdo->exec('INSERT INTO missing_upload_metadata (image_path) VALUES ("fail")');
+                }
+            );
+        },
+        PDOException::class
+    );
+    assertTrue(is_array($storedBeforeFailure), 'Persistence callback should receive stored metadata.');
+    assertFalse(
+        is_file((string) $storedBeforeFailure['absolute_path']),
+        'Metadata failure must remove the exact newly generated file.'
+    );
+} finally {
+    removeDirectoryTree($uploadRoot);
+}
+
+assertTrue(
+    UploadService::isSafeLocalImagePath('products_image/product_abcdef123456.jpg'),
+    'Generated local image paths should be accepted for display.'
+);
+assertFalse(
+    UploadService::isSafeLocalImagePath('../products_image/product_abcdef123456.jpg'),
+    'Traversal image paths must not be accepted for display.'
+);
+assertFalse(
+    UploadService::isSafeLocalImagePath('https://example.com/qr.png'),
+    'Remote QR paths must not be accepted for display.'
+);
+
+$uploadSources = implode("\n", [
+    file_get_contents(__DIR__ . '/../admin/api/index.php'),
+    file_get_contents(__DIR__ . '/../views/admin/product-form.php'),
+    file_get_contents(__DIR__ . '/../views/admin/settings.php'),
+    file_get_contents(__DIR__ . '/../public/assets/js/admin.js'),
+]);
+assertTrue(
+    str_contains($uploadSources, "'product-image-upload' => 'products.manage'"),
+    'Product upload endpoint must require products.manage.'
+);
+assertTrue(
+    str_contains($uploadSources, "'payment-qr-upload' => 'settings.manage'"),
+    'Payment QR endpoint must require settings.manage.'
+);
+assertTrue(
+    str_contains($uploadSources, "admin_api_post_id('product_id', 40)"),
+    'Product upload must validate the database product ID length.'
+);
+assertTrue(
+    str_contains($uploadSources, 'new FormData'),
+    'Admin uploads must use FormData.'
+);
+assertTrue(
+    str_contains($uploadSources, '!(requestOptions.body instanceof FormData)'),
+    'Multipart requests must bypass the JSON Content-Type header.'
+);
+assertTrue(
+    str_contains($uploadSources, 'data-product-image-upload'),
+    'Product form should expose direct image upload controls.'
+);
+assertTrue(
+    str_contains($uploadSources, 'data-payment-qr-upload'),
+    'Settings should expose payment QR upload controls.'
+);
+assertTrue(
+    str_contains(
+        file_get_contents(__DIR__ . '/../views/admin/product-detail.php'),
+        'UploadService::isSafeLocalImagePath'
+    ),
+    'Product detail must only render safe local products_image paths.'
+);
 
 echo "AdminProductServiceTest: PASS\n";

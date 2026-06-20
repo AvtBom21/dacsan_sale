@@ -3,11 +3,40 @@
 declare(strict_types=1);
 
 use DacSanNhaDan\Support\Formatter;
+use DacSanNhaDan\Services\UploadService;
 
+$settings = is_array($data['settings'] ?? null) ? $data['settings'] : [];
+$settingValues = [];
+foreach ($settings as $setting) {
+    $settingValues[(string) $setting['setting_key']] = (string) ($setting['setting_value'] ?? '');
+}
+$qrPath = $settingValues['bank_qr_image_path'] ?? '';
+$qrUrl = UploadService::isSafeLocalImagePath($qrPath)
+    ? rtrim((string) ($appBase ?? ''), '/') . '/' . $qrPath
+    : '';
+$canManageSettings = ($capabilities['settings_manage'] ?? false) === true;
 ?>
 <section class="split">
     <div>
         <h2>Shop settings</h2>
+        <?php if ($canManageSettings): ?>
+            <div class="panel upload-panel" data-payment-qr-upload>
+                <h3>QR chuyển khoản</h3>
+                <label>Chọn ảnh JPEG/PNG/WebP (tối đa 5 MiB)
+                    <input type="file" accept="image/jpeg,image/png,image/webp" data-upload-file>
+                </label>
+                <button type="button" class="button" data-upload-payment-qr>Tải QR lên</button>
+                <img
+                    class="upload-preview"
+                    data-upload-preview
+                    src="<?= Formatter::h($qrUrl) ?>"
+                    alt="QR chuyển khoản"
+                    <?= $qrUrl === '' ? 'hidden' : '' ?>
+                >
+                <p class="form-hint" data-payment-qr-path><?= Formatter::h($qrPath) ?></p>
+                <p class="field-error" data-upload-error hidden></p>
+            </div>
+        <?php endif; ?>
         <div class="table-wrap compact">
             <table>
                 <thead>
@@ -18,7 +47,7 @@ use DacSanNhaDan\Support\Formatter;
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($data['settings'] as $setting): ?>
+                    <?php foreach ($settings as $setting): ?>
                         <tr>
                             <td><?= Formatter::h((string) $setting['setting_key']) ?></td>
                             <td><?= Formatter::h((string) $setting['setting_value']) ?></td>

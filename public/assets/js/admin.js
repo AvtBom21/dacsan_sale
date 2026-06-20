@@ -47,6 +47,24 @@
     window.DSND_ADMIN.adminRequest = adminRequest;
 
     document.addEventListener('click', async (event) => {
+        const productUploadButton = event.target.closest('[data-upload-product-image]');
+        if (productUploadButton) {
+            await uploadProductImage(
+                productUploadButton.closest('[data-product-image-upload]'),
+                productUploadButton
+            );
+            return;
+        }
+
+        const paymentQrButton = event.target.closest('[data-upload-payment-qr]');
+        if (paymentQrButton) {
+            await uploadPaymentQr(
+                paymentQrButton.closest('[data-payment-qr-upload]'),
+                paymentQrButton
+            );
+            return;
+        }
+
         const productActiveButton = event.target.closest('[data-product-active]');
         if (productActiveButton) {
             const productId = productActiveButton.getAttribute('data-product-id') || '';
@@ -136,6 +154,23 @@
                 button.classList.remove('is-loading');
             });
         }
+    });
+
+    document.addEventListener('change', (event) => {
+        const input = event.target.closest('[data-upload-file]');
+        if (!input || !input.files?.[0]) {
+            return;
+        }
+        const panel = input.closest('[data-product-image-upload], [data-payment-qr-upload]');
+        const preview = panel?.querySelector('[data-upload-preview]');
+        if (!preview) {
+            return;
+        }
+        clearObjectUrl(preview);
+        const objectUrl = URL.createObjectURL(input.files[0]);
+        preview.dataset.objectUrl = objectUrl;
+        preview.src = objectUrl;
+        preview.hidden = false;
     });
 
     const productForm = document.querySelector('[data-product-form]');
@@ -232,5 +267,143 @@
             <label><input data-image="is_active" type="checkbox" checked> Hoạt động</label>
             <input data-image="sort_order" type="number" min="0" step="1" value="0" placeholder="Thứ tự">
         </div>`;
+    }
+    async function uploadProductImage(panel, button) {
+        if (!panel) {
+            return;
+        }
+        const fileInput = panel.querySelector('[data-upload-file]');
+        const errorNode = panel.querySelector('[data-upload-error]');
+        const file = fileInput?.files?.[0];
+        if (!file) {
+            showUploadError(errorNode, 'Vui lòng chọn file ảnh.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('product_id', panel.getAttribute('data-product-id') || '');
+        formData.append('image_alt', fieldValue(panel, '[data-upload-alt]'));
+        formData.append('is_base', checked(panel, '[data-upload-base]') ? '1' : '0');
+        formData.append('sort_order', String(Number(fieldValue(panel, '[data-upload-sort]') || 0)));
+
+        button.disabled = true;
+        button.classList.add('is-loading');
+        hideUploadError(errorNode);
+        try {
+            const image = await adminRequest('product-image-upload', {
+                method: 'POST',
+                body: formData,
+            });
+            if (Number(image.is_base) === 1) {
+                document.querySelectorAll('[data-image="is_base"]').forEach((checkbox) => {
+                    checkbox.checked = false;
+                });
+            }
+            document.querySelector('[data-image-list]')?.insertAdjacentHTML(
+                'beforeend',
+                imageRowTemplateFromData(image)
+            );
+            fileInput.value = '';
+            const preview = panel.querySelector('[data-upload-preview]');
+            clearObjectUrl(preview);
+            if (preview) {
+                preview.src = appAssetUrl(image.image_path);
+                preview.hidden = false;
+            }
+        } catch (error) {
+            showUploadError(errorNode, error.message || 'Không thể tải ảnh.');
+        } finally {
+            button.disabled = false;
+            button.classList.remove('is-loading');
+        }
+    }
+
+    async function uploadPaymentQr(panel, button) {
+        if (!panel) {
+            return;
+        }
+        const fileInput = panel.querySelector('[data-upload-file]');
+        const errorNode = panel.querySelector('[data-upload-error]');
+        const file = fileInput?.files?.[0];
+        if (!file) {
+            showUploadError(errorNode, 'Vui lòng chọn file QR.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+        button.disabled = true;
+        button.classList.add('is-loading');
+        hideUploadError(errorNode);
+        try {
+            const result = await adminRequest('payment-qr-upload', {
+                method: 'POST',
+                body: formData,
+            });
+            const preview = panel.querySelector('[data-upload-preview]');
+            clearObjectUrl(preview);
+            if (preview) {
+                preview.src = appAssetUrl(result.path);
+                preview.hidden = false;
+            }
+            const pathNode = panel.querySelector('[data-payment-qr-path]');
+            if (pathNode) {
+                pathNode.textContent = result.path;
+            }
+            fileInput.value = '';
+        } catch (error) {
+            showUploadError(errorNode, error.message || 'Không thể tải QR.');
+        } finally {
+            button.disabled = false;
+            button.classList.remove('is-loading');
+        }
+    }
+
+    function imageRowTemplateFromData(image) {
+        return `<div class="repeat-row image-row" data-image-row>
+            <input type="hidden" data-image="image_id" value="${escapeHtml(String(image.image_id || ''))}">
+            <input data-image="image_path" required value="${escapeHtml(String(image.image_path || ''))}">
+            <input data-image="source_url" placeholder="URL nguồn" value="${escapeHtml(String(image.source_url || ''))}">
+            <input data-image="image_alt" placeholder="Mô tả ảnh" value="${escapeHtml(String(image.image_alt || ''))}">
+            <label><input data-image="is_base" type="checkbox" ${Number(image.is_base) === 1 ? 'checked' : ''}> Ảnh chính</label>
+            <label><input data-image="is_active" type="checkbox" ${Number(image.is_active) === 1 ? 'checked' : ''}> Hoạt động</label>
+            <input data-image="sort_order" type="number" min="0" step="1" value="${Number(image.sort_order || 0)}">
+        </div>`;
+    }
+
+    function appAssetUrl(relativePath) {
+        const apiUrl = new URL(window.DSND_ADMIN.apiBase, window.location.href);
+        const appBase = apiUrl.pathname.replace(/\/admin\/api\/index\.php$/, '');
+        return `${apiUrl.origin}${appBase}/${String(relativePath).replace(/^\/+/, '')}`;
+    }
+
+    function clearObjectUrl(preview) {
+        if (preview?.dataset.objectUrl) {
+            URL.revokeObjectURL(preview.dataset.objectUrl);
+            delete preview.dataset.objectUrl;
+        }
+    }
+
+    function escapeHtml(value) {
+        const node = document.createElement('div');
+        node.textContent = value;
+        return node.innerHTML;
+    }
+
+    function showUploadError(node, message) {
+        if (node) {
+            node.textContent = message;
+            node.hidden = false;
+            return;
+        }
+        window.alert(message);
+    }
+
+    function hideUploadError(node) {
+        if (node) {
+            node.textContent = '';
+            node.hidden = true;
+        }
     }
 })();

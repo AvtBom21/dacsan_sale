@@ -7,12 +7,27 @@ use DacSanNhaDan\Support\Formatter;
 $titles = [
     'dashboard' => 'Dashboard',
     'orders' => 'Đơn hàng',
+    'order-detail' => 'Chi tiết đơn hàng',
     'products' => 'Sản phẩm',
+    'product-detail' => 'Chi tiết sản phẩm',
+    'product-form' => empty($data['id']) ? 'Thêm sản phẩm' : 'Sửa sản phẩm',
     'inventory' => 'Kho',
+    'inventory-lot' => 'Chi tiết lot kho',
     'purchase-plans' => 'Purchase Plan',
-    'settings' => 'Settings',
+    'purchase-plan-detail' => 'Chi tiết Purchase Plan',
+    'settings' => 'Cài đặt',
+    'admin-users' => 'Tài khoản quản trị',
 ];
+$parentPages = [
+    'order-detail' => 'orders',
+    'product-detail' => 'products',
+    'product-form' => 'products',
+    'inventory-lot' => 'inventory',
+    'purchase-plan-detail' => 'purchase-plans',
+];
+$activePage = $parentPages[$page] ?? $page;
 $viewFile = dirname(__DIR__) . '/admin/' . $page . '.php';
+$capabilities = is_array($capabilities ?? null) ? $capabilities : [];
 $scriptDir = str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '')));
 $scriptDir = $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
 $appBase = preg_replace('#/admin$#', '', $scriptDir) ?: '';
@@ -32,12 +47,27 @@ $storefrontUrl = $appBase === '' ? '/' : $appBase . '/';
     <aside class="sidebar">
         <a class="brand" href="./">Đặc Sản Nhà Dân</a>
         <nav>
-            <a class="<?= $page === 'dashboard' ? 'active' : '' ?>" href="./?page=dashboard">Dashboard</a>
-            <a class="<?= $page === 'orders' ? 'active' : '' ?>" href="./?page=orders">Đơn hàng</a>
-            <a class="<?= $page === 'products' ? 'active' : '' ?>" href="./?page=products">Sản phẩm</a>
-            <a class="<?= $page === 'inventory' ? 'active' : '' ?>" href="./?page=inventory">Kho</a>
-            <a class="<?= $page === 'purchase-plans' ? 'active' : '' ?>" href="./?page=purchase-plans">PO</a>
-            <a class="<?= $page === 'settings' ? 'active' : '' ?>" href="./?page=settings">Settings</a>
+            <?php if (($capabilities['dashboard'] ?? false) === true): ?>
+                <a href="./?page=dashboard" class="<?= $activePage === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
+            <?php endif; ?>
+            <?php if (($capabilities['orders'] ?? false) === true): ?>
+                <a href="./?page=orders" class="<?= $activePage === 'orders' ? 'active' : '' ?>">Đơn hàng</a>
+            <?php endif; ?>
+            <?php if (($capabilities['products'] ?? false) === true): ?>
+                <a href="./?page=products" class="<?= $activePage === 'products' ? 'active' : '' ?>">Sản phẩm</a>
+            <?php endif; ?>
+            <?php if (($capabilities['inventory'] ?? false) === true): ?>
+                <a href="./?page=inventory" class="<?= $activePage === 'inventory' ? 'active' : '' ?>">Kho</a>
+            <?php endif; ?>
+            <?php if (($capabilities['purchase_plans'] ?? false) === true): ?>
+                <a href="./?page=purchase-plans" class="<?= $activePage === 'purchase-plans' ? 'active' : '' ?>">PO</a>
+            <?php endif; ?>
+            <?php if (($capabilities['settings'] ?? false) === true): ?>
+                <a href="./?page=settings" class="<?= $activePage === 'settings' ? 'active' : '' ?>">Cài đặt</a>
+            <?php endif; ?>
+            <?php if (($capabilities['admin_users'] ?? false) === true): ?>
+                <a href="./?page=admin-users" class="<?= $activePage === 'admin-users' ? 'active' : '' ?>">Tài khoản</a>
+            <?php endif; ?>
         </nav>
         <form method="post" action="./">
             <input type="hidden" name="admin_action" value="logout">
@@ -53,9 +83,16 @@ $storefrontUrl = $appBase === '' ? '/' : $appBase . '/';
             </div>
             <a href="<?= Formatter::h($storefrontUrl) ?>" target="_blank" rel="noreferrer">Mở storefront</a>
         </header>
-        <?php require is_file($viewFile) ? $viewFile : dirname(__DIR__) . '/admin/dashboard.php'; ?>
+        <?php if (is_file($viewFile)): ?>
+            <?php require $viewFile; ?>
+        <?php else: ?>
+            <section class="panel" data-admin-placeholder="<?= Formatter::h($page) ?>">
+                <h2><?= Formatter::h($titles[$page] ?? 'Trang quản trị') ?></h2>
+                <p>Chức năng chi tiết đang được hoàn thiện. Dữ liệu route đã được kiểm tra an toàn.</p>
+            </section>
+        <?php endif; ?>
     </main>
+    <div class="toast-host" aria-live="polite" aria-atomic="true"></div>
     <script src="<?= Formatter::h($assetBase) ?>/js/admin.js"></script>
 </body>
 </html>
-

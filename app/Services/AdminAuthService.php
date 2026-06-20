@@ -11,8 +11,13 @@ final class AdminAuthService
 {
     private const SESSION_KEY = 'admin_user';
 
-    public function __construct(private AdminUserRepository $users)
-    {
+    private AdminAuthorizationService $authorization;
+
+    public function __construct(
+        private AdminUserRepository $users,
+        ?AdminAuthorizationService $authorization = null
+    ) {
+        $this->authorization = $authorization ?? new AdminAuthorizationService();
     }
 
     /**
@@ -47,6 +52,16 @@ final class AdminAuthService
     public function check(): bool
     {
         return $this->user() !== null;
+    }
+
+    public function role(): string
+    {
+        return (string) $this->requireUser()['role'];
+    }
+
+    public function can(string $permission): bool
+    {
+        return $this->authorization->allows($this->role(), $permission);
     }
 
     /**

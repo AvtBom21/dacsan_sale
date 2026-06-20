@@ -155,7 +155,7 @@ try {
         Csrf::requireAdminToken(admin_api_csrf([]));
         $productId = admin_api_post_id('product_id', 40);
         if (!$adminProductRepository->productExists($productId)) {
-            throw new AppException('KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m.', 404);
+            throw new AppException('Không tìm thấy sản phẩm.', 404);
         }
         $imageAlt = admin_api_post_text('image_alt', 255);
         $isBase = admin_api_post_flag('is_base');
@@ -189,7 +189,7 @@ try {
                     ]);
                     $image = $adminProductRepository->image($imageId, $productId);
                     if ($image === null) {
-                        throw new AppException('KhÃ´ng thá»ƒ Ä‘á»c metadata áº£nh vá»«a táº¡o.', 500);
+                        throw new AppException('Không thể đọc metadata ảnh vừa tạo.', 500);
                     }
                     $pdo->commit();
                     return $image;
@@ -223,7 +223,7 @@ try {
                     $statement->execute([
                         'setting_key' => 'bank_qr_image_path',
                         'setting_value' => $stored['path'],
-                        'note' => 'áº¢nh QR chuyá»ƒn khoáº£n trong products_image',
+                        'note' => 'Ảnh QR chuyển khoản trong products_image',
                     ]);
                     $pdo->commit();
                     return ['path' => $stored['path']];
@@ -501,11 +501,11 @@ function admin_api_uploaded_file(string $key): array
 {
     $file = $_FILES[$key] ?? null;
     if (!is_array($file)) {
-        throw new AppException('Thiáº¿u file táº£i lÃªn.', 422);
+        throw new AppException('Thiếu file tải lên.', 422);
     }
     foreach (['name', 'type', 'tmp_name', 'error', 'size'] as $field) {
         if (!array_key_exists($field, $file) || is_array($file[$field])) {
-            throw new AppException('ThÃ´ng tin file táº£i lÃªn khÃ´ng há»£p lá»‡.', 422);
+            throw new AppException('Thông tin file tải lên không hợp lệ.', 422);
         }
     }
 
@@ -522,7 +522,7 @@ function admin_api_post_id(string $key, int $maxLength = 80): string
         || strlen(trim($value)) > $maxLength
         || preg_match('/^[A-Za-z0-9_-]+$/', trim($value)) !== 1
     ) {
-        throw new AppException('Tham sá»‘ ' . $key . ' khÃ´ng há»£p lá»‡.', 422);
+        throw new AppException('Tham số ' . $key . ' không hợp lệ.', 422);
     }
 
     return trim($value);
@@ -532,7 +532,7 @@ function admin_api_post_text(string $key, int $maxLength): string
 {
     $value = $_POST[$key] ?? '';
     if (!is_string($value) || mb_strlen(trim($value), 'UTF-8') > $maxLength) {
-        throw new AppException('Tham sá»‘ ' . $key . ' khÃ´ng há»£p lá»‡.', 422);
+        throw new AppException('Tham số ' . $key . ' không hợp lệ.', 422);
     }
 
     return trim($value);
@@ -542,7 +542,7 @@ function admin_api_post_flag(string $key): int
 {
     $value = $_POST[$key] ?? '0';
     if (!is_string($value) || !in_array($value, ['0', '1'], true)) {
-        throw new AppException('Tham sá»‘ ' . $key . ' khÃ´ng há»£p lá»‡.', 422);
+        throw new AppException('Tham số ' . $key . ' không hợp lệ.', 422);
     }
 
     return (int) $value;
@@ -559,7 +559,7 @@ function admin_api_post_non_negative_int(string $key): int
             ['options' => ['min_range' => 0, 'max_range' => 2147483647]]
         ) === false
     ) {
-        throw new AppException('Tham sá»‘ ' . $key . ' khÃ´ng há»£p lá»‡.', 422);
+        throw new AppException('Tham số ' . $key . ' không hợp lệ.', 422);
     }
 
     return (int) $value;

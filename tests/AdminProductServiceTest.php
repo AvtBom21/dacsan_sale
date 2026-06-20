@@ -520,6 +520,18 @@ assertFalse(
     UploadService::isSafeLocalImagePath('https://example.com/qr.png'),
     'Remote QR paths must not be accepted for display.'
 );
+assertFalse(
+    UploadService::isSafeLocalImagePath('products_image/shell.php.jpg'),
+    'Double-extension PHP image paths must be rejected.'
+);
+assertFalse(
+    UploadService::isSafeLocalImagePath('products_image/shell.phtml.png'),
+    'Double-extension PHTML image paths must be rejected.'
+);
+assertFalse(
+    UploadService::isSafeLocalImagePath('products_image/archive.backup.webp'),
+    'Any extra dot in an image basename must be rejected.'
+);
 
 $uploadSources = implode("\n", [
     file_get_contents(__DIR__ . '/../admin/api/index.php'),
@@ -561,6 +573,28 @@ assertTrue(
         'UploadService::isSafeLocalImagePath'
     ),
     'Product detail must only render safe local products_image paths.'
+);
+$uploadServiceSource = file_get_contents(__DIR__ . '/../app/Services/UploadService.php');
+$adminApiSource = file_get_contents(__DIR__ . '/../admin/api/index.php');
+assertTrue(preg_match('//u', $uploadServiceSource) === 1, 'UploadService source must be valid UTF-8.');
+assertTrue(preg_match('//u', $adminApiSource) === 1, 'Admin API source must be valid UTF-8.');
+assertTrue(
+    str_contains($uploadServiceSource, 'Tải ảnh thất bại. Mã lỗi:'),
+    'UploadService must contain correctly encoded Vietnamese messages.'
+);
+assertTrue(
+    str_contains($uploadServiceSource, 'Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.'),
+    'MIME validation message must be correctly encoded.'
+);
+assertTrue(
+    str_contains($adminApiSource, 'Ảnh QR chuyển khoản trong products_image'),
+    'QR setting note must be correctly encoded.'
+);
+assertFalse(
+    str_contains($adminApiSource, 'unlink(')
+        || str_contains($adminApiSource, 'removeStoredFile')
+        || str_contains($adminApiSource, 'oldQr'),
+    'Payment QR upload must not delete an old configured file.'
 );
 
 echo "AdminProductServiceTest: PASS\n";

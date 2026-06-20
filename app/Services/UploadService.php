@@ -36,12 +36,12 @@ final class UploadService
     {
         $error = $this->integerField($file, 'error');
         if ($error !== UPLOAD_ERR_OK) {
-            throw new AppException('Táº£i áº£nh tháº¥t báº¡i. MÃ£ lá»—i: ' . $error . '.', 422);
+            throw new AppException('Tải ảnh thất bại. Mã lỗi: ' . $error . '.', 422);
         }
 
         $tmpName = $this->stringField($file, 'tmp_name');
         if ($tmpName === '' || !is_file($tmpName)) {
-            throw new AppException('File táº£i lÃªn khÃ´ng há»£p lá»‡.', 422);
+            throw new AppException('File tải lên không hợp lệ.', 422);
         }
 
         $reportedSize = $this->integerField($file, 'size');
@@ -53,12 +53,12 @@ final class UploadService
             || $actualSize < 1
             || $actualSize > self::MAX_BYTES
         ) {
-            throw new AppException('áº¢nh pháº£i cÃ³ dung lÆ°á»£ng tá»« 1 byte Ä‘áº¿n 5 MiB.', 422);
+            throw new AppException('Ảnh phải có dung lượng từ 1 byte đến 5 MiB.', 422);
         }
 
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmpName);
         if (!is_string($mime) || !isset(self::MIME_EXTENSIONS[$mime])) {
-            throw new AppException('Chá»‰ cháº¥p nháº­n áº£nh JPEG, PNG hoáº·c WebP.', 422);
+            throw new AppException('Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP.', 422);
         }
 
         [$uploadDirectory, $relativeDirectory] = $this->uploadDirectory();
@@ -66,12 +66,12 @@ final class UploadService
         $filename = $safePrefix . '_' . bin2hex(random_bytes(6)) . '.' . self::MIME_EXTENSIONS[$mime];
         $destination = $uploadDirectory . DIRECTORY_SEPARATOR . $filename;
         if (!$this->pathWithin($destination, $uploadDirectory)) {
-            throw new AppException('ÄÆ°á»ng dáº«n lÆ°u áº£nh khÃ´ng há»£p lá»‡.', 500);
+            throw new AppException('Đường dẫn lưu ảnh không hợp lệ.', 500);
         }
 
         $mover = $this->mover;
         if (!$mover($tmpName, $destination) || !is_file($destination)) {
-            throw new AppException('KhÃ´ng thá»ƒ lÆ°u file áº£nh.', 500);
+            throw new AppException('Không thể lưu file ảnh.', 500);
         }
 
         return [
@@ -97,7 +97,7 @@ final class UploadService
 
     public static function isSafeLocalImagePath(string $path): bool
     {
-        return preg_match('#^products_image/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpg|jpeg|png|webp)$#', $path) === 1;
+        return preg_match('#^products_image/[A-Za-z0-9][A-Za-z0-9_-]*\.(?:jpg|jpeg|png|webp)$#', $path) === 1;
     }
 
     /**
@@ -107,17 +107,17 @@ final class UploadService
     {
         $root = realpath($this->projectRoot);
         if ($root === false || !is_dir($root)) {
-            throw new AppException('ThÆ° má»¥c gá»‘c cá»§a á»©ng dá»¥ng khÃ´ng há»£p lá»‡.', 500);
+            throw new AppException('Thư mục gốc của ứng dụng không hợp lệ.', 500);
         }
 
         $candidate = $root . DIRECTORY_SEPARATOR . 'products_image';
         if (!is_dir($candidate) && !mkdir($candidate, 0775, true) && !is_dir($candidate)) {
-            throw new AppException('KhÃ´ng thá»ƒ táº¡o thÆ° má»¥c products_image.', 500);
+            throw new AppException('Không thể tạo thư mục products_image.', 500);
         }
 
         $resolved = realpath($candidate);
         if ($resolved === false || !$this->pathWithin($resolved, $root)) {
-            throw new AppException('ThÆ° má»¥c products_image náº±m ngoÃ i project.', 500);
+            throw new AppException('Thư mục products_image nằm ngoài project.', 500);
         }
 
         return [$resolved, 'products_image'];
@@ -167,7 +167,7 @@ final class UploadService
     {
         $value = $file[$key] ?? null;
         if (filter_var($value, FILTER_VALIDATE_INT) === false) {
-            throw new AppException('ThÃ´ng tin file táº£i lÃªn khÃ´ng há»£p lá»‡.', 422);
+            throw new AppException('Thông tin file tải lên không hợp lệ.', 422);
         }
 
         return (int) $value;
@@ -178,7 +178,7 @@ final class UploadService
     {
         $value = $file[$key] ?? null;
         if (!is_string($value)) {
-            throw new AppException('ThÃ´ng tin file táº£i lÃªn khÃ´ng há»£p lá»‡.', 422);
+            throw new AppException('Thông tin file tải lên không hợp lệ.', 422);
         }
 
         return trim($value);

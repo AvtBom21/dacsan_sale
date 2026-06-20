@@ -419,7 +419,7 @@ try {
         assertTrue(is_string($bytes) && $bytes !== '', 'Image fixture must decode.');
         $stored = $uploads->storeImage(
             uploadFixture($fixtureDir, 'tiny-' . $type . '.bin', $bytes),
-            '../Sáº£n Pháº©m TEST.php'
+            '../Sản Phẩm TEST.php'
         );
         assertTrue(
             preg_match('#^products_image/[a-z0-9-]+_[a-f0-9]{12}\.(jpg|png|webp)$#', $stored['path']) === 1,

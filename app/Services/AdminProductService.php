@@ -14,6 +14,8 @@ final class AdminProductService
 {
     private const SOURCES = ['Binh Dinh', 'Gia Lai', 'Unknown'];
     private const SHELF_UNITS = ['', 'days', 'months'];
+    private const MYSQL_SIGNED_INT_MAX = 2147483647;
+    private const DECIMAL_12_3_MAX = 999999999.999;
 
     public function __construct(
         private PDO $pdo,
@@ -223,6 +225,7 @@ final class AdminProductService
             throw new AppException('Danh sách ảnh không hợp lệ.', 422);
         }
         $images = [];
+        $imageIds = [];
         $baseCount = 0;
         foreach ($raw as $index => $row) {
             if (!is_array($row)) {
@@ -239,6 +242,10 @@ final class AdminProductService
                     throw new AppException('Mã ảnh không hợp lệ.', 422);
                 }
                 $imageId = (int) $imageId;
+                if (isset($imageIds[$imageId])) {
+                    throw new AppException('Mã ảnh bị trùng.', 422);
+                }
+                $imageIds[$imageId] = true;
             } else {
                 $imageId = null;
             }
@@ -323,19 +330,37 @@ final class AdminProductService
 
     private function nonNegativeInt(mixed $value, string $label): int
     {
-        if (filter_var($value, FILTER_VALIDATE_INT) === false || (int) $value < 0) {
+        $validated = filter_var(
+            $value,
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 0, 'max_range' => self::MYSQL_SIGNED_INT_MAX]]
+        );
+        if ($validated === false) {
             throw new AppException($label . ' không hợp lệ.', 422);
         }
 
-        return (int) $value;
+        return (int) $validated;
     }
 
     private function positiveNumber(mixed $value, string $label): float
     {
-        if (!is_numeric($value) || (float) $value <= 0) {
-            throw new AppException($label . ' phải lớn hơn 0.', 422);
+        if (!is_numeric($value)) {
+            throw new AppException($label . ' không hợp lệ.', 422);
         }
 
-        return round((float) $value, 3);
+        $number = (float) $value;
+        if (!is_finite($number)) {
+            throw new AppException($label . ' không hợp lệ.', 422);
+        }
+
+        $normalized = round($number, 3);
+        if ($normalized < 0.001 || $normalized > self::DECIMAL_12_3_MAX) {
+            throw new AppException(
+                $label . ' phải từ 0.001 đến 999999999.999.',
+                422
+            );
+        }
+
+        return $normalized;
     }
 }

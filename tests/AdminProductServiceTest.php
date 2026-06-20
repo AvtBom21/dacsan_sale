@@ -150,6 +150,22 @@ $invalidBase = productPayload();
 $invalidBase['uoms'][0]['conversion_to_base'] = 2;
 assertThrows(fn () => $service->save($invalidBase), AppException::class, 422);
 
+$tooSmallConversion = productPayload();
+$tooSmallConversion['uoms'][0]['conversion_to_base'] = 0.0004;
+assertThrows(fn () => $service->save($tooSmallConversion), AppException::class, 422);
+
+$tooLargeConversion = productPayload();
+$tooLargeConversion['uoms'][0]['conversion_to_base'] = 1000000000;
+assertThrows(fn () => $service->save($tooLargeConversion), AppException::class, 422);
+
+$nonFiniteConversion = productPayload();
+$nonFiniteConversion['uoms'][0]['conversion_to_base'] = INF;
+assertThrows(fn () => $service->save($nonFiniteConversion), AppException::class, 422);
+
+$tooLargeInteger = productPayload();
+$tooLargeInteger['uoms'][0]['unit_price_vnd'] = 2147483648;
+assertThrows(fn () => $service->save($tooLargeInteger), AppException::class, 422);
+
 $pdo->exec(
     "INSERT INTO product_uoms (
         uom_id, product_id, uom_label, conversion_to_base, unit_price_vnd,
@@ -265,6 +281,32 @@ assertSameValue(
     (string) $pdo->query("SELECT product_name FROM products WHERE product_id = 'TEST_PRODUCT_1'")->fetchColumn(),
     'Failure during persistence must roll back the product update.'
 );
+
+$existingImageId = (int) $pdo->query(
+    "SELECT image_id FROM product_images WHERE product_id = 'TEST_PRODUCT_1' ORDER BY image_id LIMIT 1"
+)->fetchColumn();
+$duplicateImages = productPayload(['original_product_id' => 'TEST_PRODUCT_1']);
+$duplicateImages['images'] = [
+    [
+        'image_id' => $existingImageId,
+        'image_path' => 'products_image/duplicate-1.jpg',
+        'source_url' => '',
+        'image_alt' => 'Trùng 1',
+        'is_base' => 1,
+        'is_active' => 1,
+        'sort_order' => 1,
+    ],
+    [
+        'image_id' => $existingImageId,
+        'image_path' => 'products_image/duplicate-2.jpg',
+        'source_url' => '',
+        'image_alt' => 'Trùng 2',
+        'is_base' => 0,
+        'is_active' => 1,
+        'sort_order' => 2,
+    ],
+];
+assertThrows(fn () => $service->save($duplicateImages), AppException::class, 422);
 
 $service->setActive('TEST_PRODUCT_1', false);
 assertSameValue(

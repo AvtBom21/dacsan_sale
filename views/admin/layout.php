@@ -33,6 +33,7 @@ $scriptDir = $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
 $appBase = preg_replace('#/admin$#', '', $scriptDir) ?: '';
 $assetBase = $appBase . '/assets';
 $storefrontUrl = $appBase === '' ? '/' : $appBase . '/';
+$apiBase = $appBase . '/admin/api/index.php';
 
 ?>
 <!doctype html>
@@ -43,7 +44,11 @@ $storefrontUrl = $appBase === '' ? '/' : $appBase . '/';
     <title><?= Formatter::h($titles[$page] ?? 'Admin') ?> - Đặc Sản Nhà Dân</title>
     <link rel="stylesheet" href="<?= Formatter::h($assetBase) ?>/css/admin.css">
 </head>
-<body class="admin-shell" data-csrf="<?= Formatter::h($csrfToken) ?>">
+<body
+    class="admin-shell"
+    data-csrf="<?= Formatter::h($csrfToken) ?>"
+    data-api-base="<?= Formatter::h($apiBase) ?>"
+>
     <aside class="sidebar">
         <a class="brand" href="./">Đặc Sản Nhà Dân</a>
         <nav>

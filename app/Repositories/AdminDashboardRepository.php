@@ -153,6 +153,25 @@ final class AdminDashboardRepository
     }
 
     /**
+     * @return array<string, string>
+     */
+    public function settingValues(): array
+    {
+        $settings = [];
+        $statement = $this->pdo->query(
+            'SELECT setting_key, setting_value
+             FROM settings
+             ORDER BY setting_key'
+        );
+
+        foreach ($statement->fetchAll() as $row) {
+            $settings[(string) $row['setting_key']] = (string) ($row['setting_value'] ?? '');
+        }
+
+        return $settings;
+    }
+
+    /**
      * @param array<string, mixed> $filters
      * @return array<int, array<string, mixed>>
      */

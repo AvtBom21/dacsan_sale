@@ -103,6 +103,8 @@ function admin_navigation_capabilities(
         'purchase_plans' => $authorization->allows($role, 'purchase_plans.view'),
         'settings' => $authorization->allows($role, 'settings.view'),
         'admin_users' => $authorization->allows($role, 'admin_users.manage'),
+        'orders_transition' => $authorization->allows($role, 'orders.transition'),
+        'orders_print' => $authorization->allows($role, 'orders.print'),
     ];
 }
 
@@ -190,7 +192,7 @@ function admin_page_data(AdminService $admin, string $page, ?string $pageId = nu
         'inventory' => $admin->inventory(admin_ui_filters()),
         'purchase-plans' => $admin->purchasePlans(admin_ui_filters()),
         'settings' => $admin->settings(),
-        'order-detail',
+        'order-detail' => admin_order_detail_data($admin, $pageId),
         'product-detail',
         'product-form',
         'inventory-lot',
@@ -202,6 +204,19 @@ function admin_page_data(AdminService $admin, string $page, ?string $pageId = nu
         ],
         default => $admin->dashboard(),
     };
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function admin_order_detail_data(AdminService $admin, ?string $orderId): array
+{
+    $detail = $admin->orderDetail((string) $orderId);
+    if ($detail === null) {
+        throw new AppException('Không tìm thấy đơn hàng.', 404);
+    }
+
+    return $detail;
 }
 
 /**

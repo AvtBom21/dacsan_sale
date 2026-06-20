@@ -16,6 +16,7 @@ use DacSanNhaDan\Repositories\ProductRepository;
 use DacSanNhaDan\Repositories\PurchasePlanRepository;
 use DacSanNhaDan\Repositories\SettingRepository;
 use DacSanNhaDan\Repositories\ShippingRepository;
+use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
 use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Services\CartQuoteService;
@@ -32,7 +33,8 @@ try {
     $action = admin_api_action();
     $pdo = Database::connection();
 
-    $auth = new AdminAuthService(new AdminUserRepository($pdo));
+    $authorization = new AdminAuthorizationService();
+    $auth = new AdminAuthService(new AdminUserRepository($pdo), $authorization);
     $admin = new AdminService(new AdminDashboardRepository($pdo));
 
     if ($action === '' || $action === 'health') {
@@ -64,6 +66,10 @@ try {
     }
 
     $user = $auth->requireUser();
+    $permission = admin_api_action_permission($action);
+    if ($permission !== null) {
+        $authorization->require((string) $user['role'], $permission);
+    }
 
     if ($action === 'logout') {
         admin_api_require_method('POST');
@@ -85,16 +91,19 @@ try {
     }
 
     if ($action === 'dashboard') {
+        admin_api_require_method('GET');
         Response::ok($admin->dashboard());
         return;
     }
 
     if ($action === 'orders') {
+        admin_api_require_method('GET');
         Response::ok($admin->orders(admin_api_query_filters()));
         return;
     }
 
     if ($action === 'order-detail') {
+        admin_api_require_method('GET');
         $detail = $admin->orderDetail(admin_api_required_id('order_id'));
         if ($detail === null) {
             throw new AppException('Không tìm thấy đơn hàng.', 404);
@@ -104,6 +113,7 @@ try {
     }
 
     if ($action === 'products') {
+        admin_api_require_method('GET');
         Response::ok($admin->products(admin_api_query_filters()));
         return;
     }
@@ -121,16 +131,19 @@ try {
     }
 
     if ($action === 'inventory') {
+        admin_api_require_method('GET');
         Response::ok($admin->inventory(admin_api_query_filters()));
         return;
     }
 
     if ($action === 'po-list') {
+        admin_api_require_method('GET');
         Response::ok($admin->purchasePlans(admin_api_query_filters()));
         return;
     }
 
     if ($action === 'settings') {
+        admin_api_require_method('GET');
         Response::ok($admin->settings());
         return;
     }
@@ -157,7 +170,7 @@ try {
         Csrf::requireAdminToken(admin_api_csrf($body));
         Response::ok($orderService->changeStatus(
             admin_api_body_id($body, 'order_id'),
-            (string) ($body['new_status'] ?? '')
+            admin_api_body_string($body, 'new_status')
         ));
         return;
     }
@@ -246,6 +259,30 @@ function admin_api_action(): string
     return $action;
 }
 
+function admin_api_action_permission(string $action): ?string
+{
+    $permissions = [
+        'dashboard' => 'dashboard.view',
+        'orders' => 'orders.view',
+        'order-detail' => 'orders.view',
+        'order-status' => 'orders.transition',
+        'products' => 'products.view',
+        'product-active' => 'products.manage',
+        'inventory' => 'inventory.view',
+        'po-list' => 'purchase_plans.view',
+        'po-detail' => 'purchase_plans.view',
+        'po-copy-text' => 'purchase_plans.view',
+        'po-preview' => 'purchase_plans.manage',
+        'create-po' => 'purchase_plans.manage',
+        'receive-po' => 'purchase_plans.manage',
+        'po-cancel' => 'purchase_plans.manage',
+        'settings' => 'settings.view',
+        'setting-update' => 'settings.manage',
+    ];
+
+    return $permissions[$action] ?? null;
+}
+
 function admin_api_require_method(string $method): void
 {
     if (Request::method() !== $method) {
@@ -278,7 +315,12 @@ function admin_api_query_filters(): array
 
 function admin_api_required_id(string $key): string
 {
-    $value = trim((string) ($_GET[$key] ?? ''));
+    $raw = $_GET[$key] ?? '';
+    if (!is_string($raw) && !is_int($raw)) {
+        throw new AppException('Tham số ' . $key . ' không hợp lệ.', 422);
+    }
+
+    $value = trim((string) $raw);
     if ($value === '' || preg_match('/^[A-Za-z0-9_-]{1,80}$/', $value) !== 1) {
         throw new AppException('Tham số ' . $key . ' không hợp lệ.', 422);
     }
@@ -291,12 +333,30 @@ function admin_api_required_id(string $key): string
  */
 function admin_api_body_id(array $body, string $key): string
 {
-    $value = trim((string) ($body[$key] ?? ''));
+    $raw = $body[$key] ?? '';
+    if (!is_string($raw) && !is_int($raw)) {
+        throw new AppException('Tham số ' . $key . ' không hợp lệ.', 422);
+    }
+
+    $value = trim((string) $raw);
     if ($value === '' || preg_match('/^[A-Za-z0-9_-]{1,80}$/', $value) !== 1) {
         throw new AppException('Tham số ' . $key . ' không hợp lệ.', 422);
     }
 
     return $value;
+}
+
+/**
+ * @param array<string, mixed> $body
+ */
+function admin_api_body_string(array $body, string $key): string
+{
+    $value = $body[$key] ?? '';
+    if (!is_string($value)) {
+        throw new AppException('Tham số ' . $key . ' không hợp lệ.', 422);
+    }
+
+    return trim($value);
 }
 
 /**

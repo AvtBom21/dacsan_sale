@@ -36,6 +36,14 @@ final class OrderService
      */
     public function getAllowedTransitions(string $status): array
     {
+        return self::allowedTransitionsFor($status);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function allowedTransitionsFor(string $status): array
+    {
         return self::TRANSITIONS[$status] ?? [];
     }
 
@@ -67,7 +75,7 @@ final class OrderService
 
             $currentStatus = (string) $order['status'];
             if (!$this->isTransitionAllowed($currentStatus, $newStatus)) {
-                throw new AppException('Chuyển trạng thái đơn hàng không hợp lệ.', 422);
+                throw new AppException('Chuyển trạng thái đơn hàng không hợp lệ.', 409);
             }
 
             if ($newStatus === 'done') {

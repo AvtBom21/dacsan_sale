@@ -57,7 +57,30 @@ final class AdminService
      */
     public function orderDetail(string $orderId): ?array
     {
-        return $this->dashboard->orderDetail($this->cleanId($orderId, 'Mã đơn hàng không hợp lệ.'));
+        $orderId = $this->cleanId($orderId, 'Mã đơn hàng không hợp lệ.');
+        $detail = $this->dashboard->orderDetail($orderId);
+        if ($detail === null) {
+            return null;
+        }
+
+        $settings = $this->dashboard->settingValues();
+        $transferTemplate = $settings['bank_transfer_content'] ?? $orderId;
+
+        $detail['allowed_next_statuses'] = OrderService::allowedTransitionsFor((string) $detail['status']);
+        $detail['store'] = [
+            'store_name' => $settings['store_name'] ?? '',
+            'store_phone' => $settings['store_phone'] ?? '',
+            'zalo_link' => $settings['zalo_link'] ?? '',
+        ];
+        $detail['payment'] = [
+            'bank_name' => $settings['bank_name'] ?? '',
+            'bank_account_number' => $settings['bank_account_number'] ?? '',
+            'bank_account_holder' => $settings['bank_account_holder'] ?? '',
+            'bank_transfer_content' => str_replace('{order_id}', $orderId, $transferTemplate),
+            'bank_qr_image_path' => $settings['bank_qr_image_path'] ?? '',
+        ];
+
+        return $detail;
     }
 
     /**

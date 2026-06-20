@@ -109,6 +109,9 @@ final class OrderRepository
      */
     public function findOrderForUpdate(string $orderId): ?array
     {
+        $lockClause = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql'
+            ? ' FOR UPDATE'
+            : '';
         $statement = $this->pdo->prepare(
             'SELECT order_id, customer_id, created_at, STATUS AS status, customer_name,
                     customer_phone, customer_address, receive_date, note, shipping_method,
@@ -116,8 +119,7 @@ final class OrderRepository
                     source_summary, updated_at
              FROM orders
              WHERE order_id = :order_id
-             LIMIT 1
-             FOR UPDATE'
+             LIMIT 1' . $lockClause
         );
         $statement->execute(['order_id' => $orderId]);
 

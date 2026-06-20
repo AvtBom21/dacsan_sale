@@ -33,7 +33,11 @@ use DacSanNhaDan\Support\Formatter;
         <tbody>
             <?php foreach ($data['items'] as $order): ?>
                 <tr>
-                    <td><?= Formatter::h((string) $order['order_id']) ?></td>
+                    <td>
+                        <a href="./?page=order-detail&amp;id=<?= rawurlencode((string) $order['order_id']) ?>">
+                            <?= Formatter::h((string) $order['order_id']) ?>
+                        </a>
+                    </td>
                     <td><?= Formatter::h((string) $order['created_at']) ?></td>
                     <td><?= Formatter::h((string) $order['customer_name']) ?></td>
                     <td><?= Formatter::h((string) $order['customer_phone']) ?></td>

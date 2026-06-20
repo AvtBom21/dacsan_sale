@@ -7,9 +7,11 @@ use DacSanNhaDan\Core\Csrf;
 use DacSanNhaDan\Core\Database;
 use DacSanNhaDan\Core\Response;
 use DacSanNhaDan\Repositories\AdminDashboardRepository;
+use DacSanNhaDan\Repositories\AdminProductRepository;
 use DacSanNhaDan\Repositories\AdminUserRepository;
 use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
+use DacSanNhaDan\Services\AdminProductService;
 use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Support\Logger;
 
@@ -105,6 +107,7 @@ function admin_navigation_capabilities(
         'admin_users' => $authorization->allows($role, 'admin_users.manage'),
         'orders_transition' => $authorization->allows($role, 'orders.transition'),
         'orders_print' => $authorization->allows($role, 'orders.print'),
+        'products_manage' => $authorization->allows($role, 'products.manage'),
     ];
 }
 
@@ -119,6 +122,7 @@ try {
     $authorization = new AdminAuthorizationService();
     $auth = new AdminAuthService(new AdminUserRepository($pdo), $authorization);
     $admin = new AdminService(new AdminDashboardRepository($pdo));
+    $adminProducts = new AdminProductService($pdo, new AdminProductRepository($pdo));
     $error = null;
     $user = null;
 
@@ -152,7 +156,7 @@ try {
     $role = (string) $user['role'];
     admin_require_page_permission($authorization, $role, $page);
     $pageId = admin_page_id_from_value($page, $_GET['id'] ?? null);
-    $data = admin_page_data($admin, $page, $pageId);
+    $data = admin_page_data($admin, $page, $pageId, $adminProducts);
     $capabilities = admin_navigation_capabilities($authorization, $role);
     $csrfToken = Csrf::adminToken();
 
@@ -184,7 +188,12 @@ try {
 /**
  * @return array<string, mixed>
  */
-function admin_page_data(AdminService $admin, string $page, ?string $pageId = null): array
+function admin_page_data(
+    AdminService $admin,
+    string $page,
+    ?string $pageId = null,
+    ?AdminProductService $adminProducts = null
+): array
 {
     return match ($page) {
         'orders' => $admin->orders(admin_ui_filters()),
@@ -193,8 +202,8 @@ function admin_page_data(AdminService $admin, string $page, ?string $pageId = nu
         'purchase-plans' => $admin->purchasePlans(admin_ui_filters()),
         'settings' => $admin->settings(),
         'order-detail' => admin_order_detail_data($admin, $pageId),
-        'product-detail',
-        'product-form',
+        'product-detail' => admin_product_detail_data($adminProducts, $pageId),
+        'product-form' => admin_product_form_data($adminProducts, $pageId),
         'inventory-lot',
         'purchase-plan-detail',
         'admin-users' => [
@@ -204,6 +213,26 @@ function admin_page_data(AdminService $admin, string $page, ?string $pageId = nu
         ],
         default => $admin->dashboard(),
     };
+}
+
+/** @return array<string, mixed> */
+function admin_product_detail_data(?AdminProductService $adminProducts, ?string $productId): array
+{
+    if ($adminProducts === null) {
+        throw new AppException('Dịch vụ sản phẩm chưa sẵn sàng.', 500);
+    }
+
+    return $adminProducts->detail((string) $productId);
+}
+
+/** @return array<string, mixed> */
+function admin_product_form_data(?AdminProductService $adminProducts, ?string $productId): array
+{
+    if ($adminProducts === null) {
+        throw new AppException('Dịch vụ sản phẩm chưa sẵn sàng.', 500);
+    }
+
+    return $adminProducts->form($productId);
 }
 
 /**

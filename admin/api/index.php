@@ -8,6 +8,7 @@ use DacSanNhaDan\Core\Database;
 use DacSanNhaDan\Core\Request;
 use DacSanNhaDan\Core\Response;
 use DacSanNhaDan\Repositories\AdminDashboardRepository;
+use DacSanNhaDan\Repositories\AdminProductRepository;
 use DacSanNhaDan\Repositories\AdminUserRepository;
 use DacSanNhaDan\Repositories\CustomerRepository;
 use DacSanNhaDan\Repositories\InventoryRepository;
@@ -18,6 +19,7 @@ use DacSanNhaDan\Repositories\SettingRepository;
 use DacSanNhaDan\Repositories\ShippingRepository;
 use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
+use DacSanNhaDan\Services\AdminProductService;
 use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Services\CartQuoteService;
 use DacSanNhaDan\Services\CheckoutService;
@@ -36,6 +38,7 @@ try {
     $authorization = new AdminAuthorizationService();
     $auth = new AdminAuthService(new AdminUserRepository($pdo), $authorization);
     $admin = new AdminService(new AdminDashboardRepository($pdo));
+    $adminProducts = new AdminProductService($pdo, new AdminProductRepository($pdo));
 
     if ($action === '' || $action === 'health') {
         Response::ok([
@@ -118,11 +121,25 @@ try {
         return;
     }
 
+    if ($action === 'product-detail') {
+        admin_api_require_method('GET');
+        Response::ok($adminProducts->detail(admin_api_required_id('product_id')));
+        return;
+    }
+
+    if ($action === 'product-save') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminProducts->save($body));
+        return;
+    }
+
     if ($action === 'product-active') {
         admin_api_require_method('POST');
         $body = Request::json();
         Csrf::requireAdminToken(admin_api_csrf($body));
-        $admin->updateProductActive(
+        $adminProducts->setActive(
             admin_api_body_id($body, 'product_id'),
             ((int) ($body['is_active'] ?? 0)) === 1
         );
@@ -267,6 +284,8 @@ function admin_api_action_permission(string $action): ?string
         'order-detail' => 'orders.view',
         'order-status' => 'orders.transition',
         'products' => 'products.view',
+        'product-detail' => 'products.view',
+        'product-save' => 'products.manage',
         'product-active' => 'products.manage',
         'inventory' => 'inventory.view',
         'po-list' => 'purchase_plans.view',

@@ -172,6 +172,36 @@ final class PurchasePlanService
         }
     }
 
+    public function markPlanOrdered(string $planId): void
+    {
+        $planId = $this->normalizePlanId($planId);
+        $this->pdo->beginTransaction();
+
+        try {
+            $plan = $this->plans->findPlanForUpdate($planId);
+            if ($plan === null) {
+                throw new AppException('Không tìm thấy PO.', 404);
+            }
+
+            $status = (string) $plan['status'];
+            if ($status === 'ordered') {
+                $this->pdo->commit();
+                return;
+            }
+            if ($status !== 'draft') {
+                throw new AppException('Chỉ PO nháp mới có thể chuyển sang đã đặt hàng.', 422);
+            }
+
+            $this->plans->updatePlanStatus($planId, 'ordered');
+            $this->pdo->commit();
+        } catch (Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $exception;
+        }
+    }
+
     /**
      * @param array<string, mixed> $input
      */
@@ -391,6 +421,7 @@ final class PurchasePlanService
         unset($receipt);
 
         $status = (string) $detail['status'];
+        $detail['can_mark_ordered'] = $status === 'draft';
         $detail['can_receive'] = $canReceive && in_array($status, ['ordered', 'partial_received'], true);
         $detail['can_cancel'] = in_array($status, ['draft', 'ordered'], true)
             && $detail['receipts'] === [];

@@ -9,6 +9,9 @@ $canManage = ($capabilities['purchase_plans_manage'] ?? false) === true;
 <section class="page-actions no-print">
     <a class="button-secondary" href="./?page=purchase-plans">Quay lại danh sách</a>
     <button type="button" class="button-secondary" data-po-copy data-plan-id="<?= Formatter::h((string) $data['plan_id']) ?>">Sao chép nội dung</button>
+    <?php if ($canManage && ($data['can_mark_ordered'] ?? false)): ?>
+        <button type="button" class="button" data-po-mark-ordered data-plan-id="<?= Formatter::h((string) $data['plan_id']) ?>">Đã đặt hàng</button>
+    <?php endif; ?>
     <?php if ($canManage && ($data['can_cancel'] ?? false)): ?>
         <button type="button" class="button-danger" data-po-cancel data-plan-id="<?= Formatter::h((string) $data['plan_id']) ?>">Hủy PO</button>
     <?php endif; ?>

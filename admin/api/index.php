@@ -423,6 +423,15 @@ try {
         return;
     }
 
+    if ($action === 'po-mark-ordered') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        $purchasePlanService->markPlanOrdered(admin_api_body_id($body, 'plan_id'));
+        Response::ok(['message' => 'PO đã chuyển sang trạng thái đã đặt hàng.']);
+        return;
+    }
+
     if ($action === 'po-cancel') {
         admin_api_require_method('POST');
         $body = Request::json();
@@ -484,6 +493,7 @@ function admin_api_action_permission(string $action): ?string
         'po-preview' => 'purchase_plans.manage',
         'create-po' => 'purchase_plans.manage',
         'receive-po' => 'purchase_plans.manage',
+        'po-mark-ordered' => 'purchase_plans.manage',
         'po-cancel' => 'purchase_plans.manage',
         'settings' => 'settings.view',
         'settings-update' => 'settings.manage',

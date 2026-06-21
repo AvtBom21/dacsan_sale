@@ -26,7 +26,9 @@ $sources = implode("\n", [
 ]);
 assertTrue(str_contains($sources, "'po-preview' => 'purchase_plans.manage'"), 'PO preview must require manage permission.');
 assertTrue(str_contains($sources, "'receive-po' => 'purchase_plans.manage'"), 'PO receipt must require manage permission.');
+assertTrue(str_contains($sources, "'po-mark-ordered' => 'purchase_plans.manage'"), 'PO ordering must require manage permission.');
 assertTrue(str_contains($sources, 'data-po-receive'), 'PO detail must expose receipt controls.');
+assertTrue(str_contains($sources, 'data-po-mark-ordered'), 'Draft PO detail must expose ordering controls.');
 assertTrue(str_contains($sources, 'data-po-cancel'), 'PO detail must expose valid cancellation controls.');
 assertTrue(str_contains($sources, 'data-po-preview'), 'Order list must expose PO preview controls.');
 
@@ -81,6 +83,12 @@ try {
 
     $planId = $service->createFromSelectedOrders([$orderId], ['note' => 'TEST PO flow']);
     assertSameValue('ordered', (string) $pdo->query("SELECT status FROM orders WHERE order_id = " . $pdo->quote($orderId))->fetchColumn(), 'Creating PO must mark order ordered.');
+    $pdo->prepare("UPDATE purchase_plans SET status = 'draft' WHERE plan_id = ?")->execute([$planId]);
+    $detail = $service->getDetail($planId);
+    assertSameValue(true, $detail['can_mark_ordered'], 'Draft PO must expose an ordering action.');
+    assertSameValue(false, $detail['can_receive'], 'Draft PO must not be receivable before ordering.');
+    $service->markPlanOrdered($planId);
+    assertSameValue('ordered', (string) $pdo->query("SELECT status FROM purchase_plans WHERE plan_id = " . $pdo->quote($planId))->fetchColumn(), 'Ordering a draft PO must persist ordered status.');
     $detail = $service->getDetail($planId);
     assertTrue(is_array($detail), 'Created PO detail must exist.');
     assertSameValue(true, $detail['can_receive'], 'Ordered PO must be receivable.');

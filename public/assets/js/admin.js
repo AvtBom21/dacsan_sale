@@ -351,6 +351,24 @@
         }
     });
 
+    document.querySelector('[data-po-mark-ordered]')?.addEventListener('click', async (event) => {
+        if (!window.confirm('Xác nhận PO này đã được gửi đặt hàng?')) return;
+        const button = event.currentTarget;
+        const errorNode = document.querySelector('[data-po-error]');
+        button.disabled = true;
+        try {
+            await adminRequest('po-mark-ordered', {
+                method: 'POST',
+                body: JSON.stringify({ plan_id: button.dataset.planId || '' }),
+            });
+            window.location.reload();
+        } catch (error) {
+            errorNode.textContent = error.message || 'Không thể chuyển PO sang đã đặt hàng.';
+            errorNode.hidden = false;
+            button.disabled = false;
+        }
+    });
+
     const poReceiveForm = document.querySelector('[data-po-receive]');
     if (poReceiveForm) {
         poReceiveForm.addEventListener('submit', async (event) => {

@@ -180,6 +180,15 @@ textarea {
     margin-bottom: 18px;
 }
 
+.upload-panel label {
+    margin: 0;
+}
+
+.upload-panel input {
+    width: 100%;
+    min-width: 0;
+}
+
 .upload-preview {
     width: 132px;
     height: 132px;
@@ -677,12 +686,12 @@ th {
 }
 
 .form-submit {
-    position: sticky;
-    bottom: 0;
-    z-index: 5;
-    border-top: 1px solid #cbd5e1;
-    padding: 14px 0;
-    background: #f4f6f8;
+    position: static;
+    margin-top: 18px;
+    border: 1px solid #d8dee5;
+    border-radius: 8px;
+    padding: 14px;
+    background: #fff;
 }
 
 .action-error {
@@ -1206,6 +1215,119 @@ td a {
     background: #fef2f2;
 }
 
+.admin-dialog-backdrop {
+    position: fixed;
+    z-index: 2000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgb(15 23 42 / 55%);
+    backdrop-filter: blur(2px);
+}
+
+.admin-dialog-backdrop[hidden] {
+    display: none;
+}
+
+.admin-dialog {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    width: min(460px, 100%);
+    border: 1px solid var(--admin-line);
+    border-radius: 14px;
+    padding: 22px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgb(15 23 42 / 28%);
+    animation: admin-dialog-in .16s ease-out;
+}
+
+.admin-dialog-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    margin-right: 14px;
+    border-radius: 50%;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.admin-dialog-icon::before {
+    content: "i";
+}
+
+.admin-dialog[data-type="success"] .admin-dialog-icon {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.admin-dialog[data-type="success"] .admin-dialog-icon::before {
+    content: "✓";
+}
+
+.admin-dialog[data-type="error"] .admin-dialog-icon,
+.admin-dialog[data-type="danger"] .admin-dialog-icon {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.admin-dialog[data-type="error"] .admin-dialog-icon::before,
+.admin-dialog[data-type="danger"] .admin-dialog-icon::before {
+    content: "!";
+}
+
+.admin-dialog[data-type="warning"] .admin-dialog-icon {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.admin-dialog[data-type="warning"] .admin-dialog-icon::before {
+    content: "?";
+}
+
+.admin-dialog-content {
+    min-width: 0;
+}
+
+.admin-dialog-content h2 {
+    margin: 2px 0 8px;
+    font-size: 20px;
+    letter-spacing: -.02em;
+}
+
+.admin-dialog-content p {
+    margin: 0;
+    color: var(--admin-muted);
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.admin-dialog-actions {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+body.has-admin-dialog {
+    overflow: hidden;
+}
+
+@keyframes admin-dialog-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 .pagination a {
     display: inline-flex;
     min-width: 38px;
@@ -1220,6 +1342,58 @@ td a {
     text-decoration: none;
 }
 
+.form-grid,
+.repeat-row,
+.image-row,
+.zone-row,
+.upload-panel {
+    min-width: 0;
+}
+
+.form-grid > *,
+.repeat-row > *,
+.image-row > *,
+.zone-row > *,
+.upload-panel > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.repeat-row {
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+}
+
+.repeat-row label:has(input:not([type="checkbox"])) {
+    align-items: stretch;
+    flex-direction: column;
+}
+
+.repeat-row label > input:not([type="checkbox"]) {
+    width: 100%;
+    min-width: 0;
+}
+
+.image-row {
+    grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+}
+
+.zone-row {
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+}
+
+td {
+    max-width: 320px;
+    overflow-wrap: anywhere;
+}
+
+td:not(.selection-cell) {
+    white-space: normal;
+}
+
+th {
+    white-space: nowrap;
+}
+
 @media (max-width: 900px) {
     .admin-shell {
         grid-template-columns: 190px minmax(0, 1fr);
@@ -1232,6 +1406,10 @@ td a {
     .section-heading {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .zone-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -1305,5 +1483,30 @@ td a {
 
     .toolbar input {
         min-width: 0;
+    }
+
+    .form-grid,
+    .repeat-row,
+    .image-row,
+    .zone-row,
+    .upload-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-dialog {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+
+    .admin-dialog-icon {
+        margin: 0 0 12px;
+    }
+
+    .admin-dialog-actions {
+        flex-direction: column-reverse;
+    }
+
+    .admin-dialog-actions button {
+        width: 100%;
     }
 }

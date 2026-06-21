@@ -9,6 +9,85 @@
         apiBase: shell.getAttribute('data-api-base') || './api/index.php',
     };
 
+    const dialogBackdrop = document.querySelector('[data-admin-dialog]');
+    const dialogPanel = dialogBackdrop?.querySelector('.admin-dialog');
+    const dialogTitle = dialogBackdrop?.querySelector('[data-admin-dialog-title]');
+    const dialogMessage = dialogBackdrop?.querySelector('[data-admin-dialog-message]');
+    const dialogConfirm = dialogBackdrop?.querySelector('[data-admin-dialog-confirm]');
+    const dialogCancel = dialogBackdrop?.querySelector('[data-admin-dialog-cancel]');
+    let dialogResolver = null;
+    let dialogLastFocus = null;
+
+    function closeAdminDialog(result) {
+        if (!dialogBackdrop || dialogBackdrop.hidden) return;
+        dialogBackdrop.hidden = true;
+        document.body.classList.remove('has-admin-dialog');
+        const resolver = dialogResolver;
+        dialogResolver = null;
+        if (dialogLastFocus instanceof HTMLElement) dialogLastFocus.focus();
+        dialogLastFocus = null;
+        if (resolver) resolver(result);
+    }
+
+    function showAdminDialog({
+        type = 'info',
+        title = 'Thông báo',
+        message = '',
+        confirmText = 'Đồng ý',
+        cancelText = '',
+    } = {}) {
+        if (!dialogBackdrop || !dialogPanel || !dialogTitle || !dialogMessage || !dialogConfirm || !dialogCancel) {
+            return Promise.resolve(cancelText === '');
+        }
+
+        if (dialogResolver) closeAdminDialog(false);
+        dialogLastFocus = document.activeElement;
+        dialogPanel.dataset.type = type;
+        dialogTitle.textContent = title;
+        dialogMessage.textContent = message;
+        dialogConfirm.textContent = confirmText;
+        dialogConfirm.className = type === 'danger' ? 'button-danger' : 'button';
+        dialogCancel.textContent = cancelText || 'Hủy';
+        dialogCancel.hidden = cancelText === '';
+        dialogBackdrop.hidden = false;
+        document.body.classList.add('has-admin-dialog');
+
+        window.requestAnimationFrame(() => dialogConfirm.focus());
+        return new Promise((resolve) => {
+            dialogResolver = resolve;
+        });
+    }
+
+    const showMessage = (type, title, message, confirmText = 'Đóng') => showAdminDialog({
+        type,
+        title,
+        message,
+        confirmText,
+    });
+
+    const confirmAction = (title, message, danger = false) => showAdminDialog({
+        type: danger ? 'danger' : 'warning',
+        title,
+        message,
+        confirmText: danger ? 'Xác nhận' : 'Tiếp tục',
+        cancelText: 'Hủy',
+    });
+
+    dialogConfirm?.addEventListener('click', () => closeAdminDialog(true));
+    dialogCancel?.addEventListener('click', () => closeAdminDialog(false));
+    dialogBackdrop?.addEventListener('click', (event) => {
+        if (event.target === dialogBackdrop && !dialogCancel.hidden) closeAdminDialog(false);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (!dialogBackdrop || dialogBackdrop.hidden) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closeAdminDialog(dialogCancel.hidden ? true : false);
+        }
+    });
+
+    window.DSND_ADMIN.showDialog = showAdminDialog;
+
     async function adminRequest(action, options = {}) {
         const requestOptions = { ...options };
         const query = requestOptions.query || {};
@@ -81,9 +160,10 @@
                         is_active: isActive,
                     }),
                 });
+                await showMessage('success', 'Đã cập nhật', 'Trạng thái sản phẩm đã được lưu.');
                 window.location.reload();
             } catch (error) {
-                window.alert(error.message || 'Không thể cập nhật trạng thái sản phẩm.');
+                await showMessage('error', 'Không thể cập nhật', error.message || 'Không thể cập nhật trạng thái sản phẩm.');
                 productActiveButton.disabled = false;
             }
             return;
@@ -118,7 +198,14 @@
             return;
         }
 
-        if (nextStatus === 'cancelled' && !window.confirm('Bạn chắc chắn muốn hủy đơn hàng này?')) {
+        if (
+            nextStatus === 'cancelled'
+            && !await confirmAction(
+                'Hủy đơn hàng?',
+                'Đơn hàng sẽ chuyển sang trạng thái đã hủy. Thao tác này có thể ảnh hưởng đến tồn kho đã giữ.',
+                true
+            )
+        ) {
             return;
         }
 
@@ -143,13 +230,14 @@
                     new_status: nextStatus,
                 }),
             });
+            await showMessage('success', 'Đã cập nhật đơn hàng', 'Trạng thái đơn hàng đã được lưu.');
             window.location.reload();
         } catch (error) {
             if (errorNode) {
                 errorNode.textContent = error.message || 'Không thể cập nhật trạng thái.';
                 errorNode.hidden = false;
             } else {
-                window.alert(error.message || 'Không thể cập nhật trạng thái.');
+                await showMessage('error', 'Không thể cập nhật', error.message || 'Không thể cập nhật trạng thái.');
             }
         } finally {
             actionButtons.forEach((button) => {
@@ -192,6 +280,7 @@
                     method: 'POST',
                     body: JSON.stringify(product),
                 });
+                await showMessage('success', 'Đã lưu sản phẩm', 'Thông tin sản phẩm, đơn vị bán và hình ảnh đã được cập nhật.');
                 window.location.href = `./?page=product-detail&id=${encodeURIComponent(saved.product_id)}`;
             } catch (error) {
                 errorNode.textContent = error.message || 'Không thể lưu sản phẩm.';
@@ -226,6 +315,7 @@
                     method: 'POST',
                     body: JSON.stringify(payload),
                 });
+                await showMessage('success', 'Đã nhập kho', `Lô hàng ${lot.lot_id} đã được ghi nhận.`);
                 window.location.href = `./?page=inventory-lot&id=${encodeURIComponent(lot.lot_id)}`;
             } catch (error) {
                 errorNode.textContent = error.message || 'Không thể nhập kho.';
@@ -259,6 +349,7 @@
                         reason: inventoryAdjustForm.elements.reason.value,
                     }),
                 });
+                await showMessage('success', 'Đã điều chỉnh tồn kho', 'Số lượng tồn và lịch sử biến động đã được cập nhật.');
                 window.location.reload();
             } catch (error) {
                 errorNode.textContent = error.message || 'Không thể điều chỉnh tồn kho.';
@@ -323,7 +414,10 @@
         createButton?.addEventListener('click', async (event) => {
             const orderIds = selectedOrderIds();
             if (orderIds.length === 0) return;
-            if (!window.confirm(`Tạo PO từ ${orderIds.length} đơn đã chọn?`)) return;
+            if (!await confirmAction(
+                'Tạo đơn mua hàng?',
+                `Hệ thống sẽ tổng hợp nhu cầu từ ${orderIds.length} đơn hàng đã chọn để tạo PO.`
+            )) return;
             const button = event.currentTarget;
             button.disabled = true;
             errorNode.hidden = true;
@@ -335,6 +429,7 @@
                         note: poBuilder.querySelector('[data-po-note]')?.value || '',
                     }),
                 });
+                await showMessage('success', 'Đã tạo PO', `PO ${result.plan_id} đã được tạo thành công.`);
                 window.location.href = `./?page=purchase-plan-detail&id=${encodeURIComponent(result.plan_id)}`;
             } catch (error) {
                 errorNode.textContent = error.message || 'Không thể tạo PO.';
@@ -361,7 +456,11 @@
     });
 
     document.querySelector('[data-po-cancel]')?.addEventListener('click', async (event) => {
-        if (!window.confirm('Hủy PO này và trả các đơn về trạng thái đã xác nhận?')) return;
+        if (!await confirmAction(
+            'Hủy PO?',
+            'PO sẽ bị hủy và các đơn liên quan được trả về trạng thái đã xác nhận.',
+            true
+        )) return;
         const button = event.currentTarget;
         const errorNode = document.querySelector('[data-po-error]');
         button.disabled = true;
@@ -370,6 +469,7 @@
                 method: 'POST',
                 body: JSON.stringify({ plan_id: button.dataset.planId || '' }),
             });
+            await showMessage('success', 'Đã hủy PO', 'Các đơn liên quan đã được trả về trạng thái phù hợp.');
             window.location.reload();
         } catch (error) {
             errorNode.textContent = error.message || 'Không thể hủy PO.';
@@ -379,7 +479,10 @@
     });
 
     document.querySelector('[data-po-mark-ordered]')?.addEventListener('click', async (event) => {
-        if (!window.confirm('Xác nhận PO này đã được gửi đặt hàng?')) return;
+        if (!await confirmAction(
+            'Xác nhận đã đặt hàng?',
+            'PO sẽ chuyển sang trạng thái đã đặt hàng và sẵn sàng ghi nhận hàng về.'
+        )) return;
         const button = event.currentTarget;
         const errorNode = document.querySelector('[data-po-error]');
         button.disabled = true;
@@ -388,6 +491,7 @@
                 method: 'POST',
                 body: JSON.stringify({ plan_id: button.dataset.planId || '' }),
             });
+            await showMessage('success', 'Đã cập nhật PO', 'PO đã chuyển sang trạng thái đã đặt hàng.');
             window.location.reload();
         } catch (error) {
             errorNode.textContent = error.message || 'Không thể chuyển PO sang đã đặt hàng.';
@@ -422,6 +526,7 @@
                         items,
                     }),
                 });
+                await showMessage('success', 'Đã nhận hàng', 'Số lượng nhận được đã được nhập kho và cập nhật vào PO.');
                 window.location.reload();
             } catch (error) {
                 errorNode.textContent = error.message || 'Không thể nhận hàng PO.';
@@ -445,6 +550,7 @@
                     method: 'POST',
                     body: JSON.stringify({ settings }),
                 });
+                await showMessage('success', 'Đã lưu cài đặt', 'Thông tin cửa hàng đã được cập nhật.');
                 window.location.reload();
             } catch (error) {
                 errorNode.textContent = error.message || 'Không thể lưu cài đặt.';
@@ -469,6 +575,7 @@
                     method: 'POST',
                     body: JSON.stringify(values),
                 });
+                await showMessage('success', 'Đã lưu vùng giao hàng', 'Phí và trạng thái vùng giao hàng đã được cập nhật.');
                 window.location.reload();
             } catch (error) {
                 if (errorNode) {
@@ -492,6 +599,7 @@
                 method: 'POST',
                 body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
             });
+            await showMessage('success', 'Đã tạo tài khoản', 'Tài khoản quản trị mới đã sẵn sàng sử dụng.');
             window.location.reload();
         } catch (error) {
             errorNode.textContent = error.message || 'Không thể tạo tài khoản.';
@@ -515,9 +623,10 @@
                         is_active: form.elements.is_active.checked ? 1 : 0,
                     }),
                 });
+                await showMessage('success', 'Đã cập nhật tài khoản', 'Thông tin tài khoản quản trị đã được lưu.');
                 window.location.reload();
             } catch (error) {
-                window.alert(error.message || 'Không thể cập nhật tài khoản.');
+                await showMessage('error', 'Không thể cập nhật', error.message || 'Không thể cập nhật tài khoản.');
                 submit.disabled = false;
             }
         });
@@ -539,6 +648,7 @@
                     }),
                 });
                 form.reset();
+                await showMessage('success', 'Đã đặt lại mật khẩu', 'Mật khẩu mới đã được lưu cho tài khoản này.');
                 submit.disabled = false;
             } catch (error) {
                 errorNode.textContent = error.message || 'Không thể đặt lại mật khẩu.';
@@ -563,6 +673,7 @@
                     ? { zone_id: zoneId, is_active: Number(activeButton.dataset.zoneActive || 0) }
                     : { zone_id: zoneId }),
             });
+            await showMessage('success', 'Đã cập nhật vùng giao hàng', 'Thay đổi đã được lưu.');
             window.location.reload();
         } catch (error) {
             if (errorNode) {
@@ -772,7 +883,7 @@
             node.hidden = false;
             return;
         }
-        window.alert(message);
+        void showMessage('error', 'Không thể xử lý', message);
     }
 
     function hideUploadError(node) {

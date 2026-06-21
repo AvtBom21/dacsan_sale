@@ -100,6 +100,25 @@ $adminJsVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/js/a
         <?php endif; ?>
     </main>
     <div class="toast-host" aria-live="polite" aria-atomic="true"></div>
+    <div class="admin-dialog-backdrop" data-admin-dialog hidden>
+        <section
+            class="admin-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-dialog-title"
+            aria-describedby="admin-dialog-message"
+        >
+            <div class="admin-dialog-icon" data-admin-dialog-icon aria-hidden="true"></div>
+            <div class="admin-dialog-content">
+                <h2 id="admin-dialog-title" data-admin-dialog-title>Thông báo</h2>
+                <p id="admin-dialog-message" data-admin-dialog-message></p>
+            </div>
+            <div class="admin-dialog-actions">
+                <button type="button" class="button-secondary" data-admin-dialog-cancel>Hủy</button>
+                <button type="button" class="button" data-admin-dialog-confirm>Đồng ý</button>
+            </div>
+        </section>
+    </div>
     <script src="<?= Formatter::h($assetBase) ?>/js/admin.js?v=<?= Formatter::h($adminJsVersion) ?>"></script>
 </body>
 </html>

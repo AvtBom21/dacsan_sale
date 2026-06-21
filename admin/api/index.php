@@ -23,6 +23,7 @@ use DacSanNhaDan\Services\AdminAuthService;
 use DacSanNhaDan\Services\AdminInventoryService;
 use DacSanNhaDan\Services\AdminProductService;
 use DacSanNhaDan\Services\AdminSettingsService;
+use DacSanNhaDan\Services\AdminUserService;
 use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Services\CartQuoteService;
 use DacSanNhaDan\Services\CheckoutService;
@@ -47,6 +48,7 @@ try {
     $inventoryRepository = new InventoryRepository($pdo);
     $adminInventory = new AdminInventoryService($pdo, $inventoryRepository);
     $adminSettings = new AdminSettingsService($pdo, new AdminSettingsRepository($pdo));
+    $adminUsers = new AdminUserService($pdo, new AdminUserRepository($pdo));
     $uploads = new UploadService(dirname(__DIR__, 2));
 
     if ($action === '' || $action === 'health') {
@@ -324,6 +326,39 @@ try {
         return;
     }
 
+    if ($action === 'admin-users') {
+        admin_api_require_method('GET');
+        Response::ok($adminUsers->page());
+        return;
+    }
+
+    if ($action === 'admin-user-create') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminUsers->create($body));
+        return;
+    }
+
+    if ($action === 'admin-user-update') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminUsers->update($body));
+        return;
+    }
+
+    if ($action === 'admin-user-password') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminUsers->resetPassword(
+            $body['admin_id'] ?? null,
+            $body['password'] ?? null
+        ));
+        return;
+    }
+
     $orderRepository = new OrderRepository($pdo);
     $purchasePlanRepository = new PurchasePlanRepository($pdo);
     $inventoryService = new InventoryService($inventoryRepository);
@@ -456,6 +491,10 @@ function admin_api_action_permission(string $action): ?string
         'shipping-zone-active' => 'settings.manage',
         'shipping-zone-default' => 'settings.manage',
         'payment-qr-upload' => 'settings.manage',
+        'admin-users' => 'admin_users.manage',
+        'admin-user-create' => 'admin_users.manage',
+        'admin-user-update' => 'admin_users.manage',
+        'admin-user-password' => 'admin_users.manage',
     ];
 
     return $permissions[$action] ?? null;

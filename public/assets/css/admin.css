@@ -845,3 +845,15 @@ th {
         border-bottom: 1px solid var(--line, #e5e7eb);
     }
 }
+
+.user-list {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.password-reset {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line, #e5e7eb);
+}

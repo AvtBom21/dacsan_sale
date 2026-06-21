@@ -435,6 +435,74 @@
         });
     });
 
+    document.querySelector('[data-admin-user-create]')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const errorNode = form.querySelector('[data-user-error]');
+        const submit = form.querySelector('button[type="submit"]');
+        submit.disabled = true;
+        errorNode.hidden = true;
+        try {
+            await adminRequest('admin-user-create', {
+                method: 'POST',
+                body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
+            });
+            window.location.reload();
+        } catch (error) {
+            errorNode.textContent = error.message || 'Không thể tạo tài khoản.';
+            errorNode.hidden = false;
+            submit.disabled = false;
+        }
+    });
+
+    document.querySelectorAll('[data-admin-user-update]').forEach((form) => {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const submit = form.querySelector('button[type="submit"]');
+            submit.disabled = true;
+            try {
+                await adminRequest('admin-user-update', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        admin_id: Number(form.dataset.adminId || 0),
+                        full_name: form.elements.full_name.value,
+                        role: form.elements.role.value,
+                        is_active: form.elements.is_active.checked ? 1 : 0,
+                    }),
+                });
+                window.location.reload();
+            } catch (error) {
+                window.alert(error.message || 'Không thể cập nhật tài khoản.');
+                submit.disabled = false;
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-admin-user-password]').forEach((form) => {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const errorNode = form.querySelector('[data-user-error]');
+            const submit = form.querySelector('button[type="submit"]');
+            submit.disabled = true;
+            errorNode.hidden = true;
+            try {
+                await adminRequest('admin-user-password', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        admin_id: Number(form.dataset.adminId || 0),
+                        password: form.elements.password.value,
+                    }),
+                });
+                form.reset();
+                submit.disabled = false;
+            } catch (error) {
+                errorNode.textContent = error.message || 'Không thể đặt lại mật khẩu.';
+                errorNode.hidden = false;
+                submit.disabled = false;
+            }
+        });
+    });
+
     document.addEventListener('click', async (event) => {
         const activeButton = event.target.closest('[data-zone-active]');
         const defaultButton = event.target.closest('[data-zone-default]');

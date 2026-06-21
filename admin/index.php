@@ -18,6 +18,7 @@ use DacSanNhaDan\Services\AdminAuthService;
 use DacSanNhaDan\Services\AdminInventoryService;
 use DacSanNhaDan\Services\AdminProductService;
 use DacSanNhaDan\Services\AdminSettingsService;
+use DacSanNhaDan\Services\AdminUserService;
 use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Services\InventoryService;
 use DacSanNhaDan\Services\OrderService;
@@ -137,6 +138,7 @@ try {
     $adminProducts = new AdminProductService($pdo, new AdminProductRepository($pdo));
     $adminInventory = new AdminInventoryService($pdo, new InventoryRepository($pdo));
     $adminSettings = new AdminSettingsService($pdo, new AdminSettingsRepository($pdo));
+    $adminUsers = new AdminUserService($pdo, new AdminUserRepository($pdo));
     $inventoryService = new InventoryService(new InventoryRepository($pdo));
     $purchasePlans = new PurchasePlanService(
         $pdo,
@@ -184,7 +186,8 @@ try {
         $adminProducts,
         $adminInventory,
         $purchasePlans,
-        $adminSettings
+        $adminSettings,
+        $adminUsers
     );
     $capabilities = admin_navigation_capabilities($authorization, $role);
     $csrfToken = Csrf::adminToken();
@@ -224,7 +227,8 @@ function admin_page_data(
     ?AdminProductService $adminProducts = null,
     ?AdminInventoryService $adminInventory = null,
     ?PurchasePlanService $purchasePlans = null,
-    ?AdminSettingsService $adminSettings = null
+    ?AdminSettingsService $adminSettings = null,
+    ?AdminUserService $adminUsers = null
 ): array
 {
     return match ($page) {
@@ -238,11 +242,7 @@ function admin_page_data(
         'product-form' => admin_product_form_data($adminProducts, $pageId),
         'inventory-lot' => admin_inventory_lot_data($adminInventory, $pageId),
         'purchase-plan-detail' => admin_purchase_plan_detail_data($purchasePlans, $pageId),
-        'admin-users' => [
-            'id' => $pageId,
-            'page' => $page,
-            'placeholder' => true,
-        ],
+        'admin-users' => $adminUsers?->page() ?? ['users' => [], 'roles' => []],
         default => $admin->dashboard(),
     };
 }

@@ -78,3 +78,4 @@ $canManagePlans = ($capabilities['purchase_plans_manage'] ?? false) === true;
         </tbody>
     </table>
 </section>
+<?php require __DIR__ . '/pagination.php'; ?>

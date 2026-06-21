@@ -310,7 +310,7 @@ function admin_order_detail_data(AdminService $admin, ?string $orderId): array
 function admin_ui_filters(): array
 {
     $filters = [];
-    foreach (['status', 'q', 'date_from', 'date_to', 'is_active', 'limit'] as $key) {
+    foreach (['status', 'q', 'date_from', 'date_to', 'is_active', 'limit', 'p', 'per_page'] as $key) {
         if (isset($_GET[$key]) && trim((string) $_GET[$key]) !== '') {
             $filters[$key] = trim((string) $_GET[$key]);
         }

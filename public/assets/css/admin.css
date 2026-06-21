@@ -857,3 +857,12 @@ th {
     padding-top: 1rem;
     border-top: 1px solid var(--line, #e5e7eb);
 }
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+}

@@ -6,9 +6,11 @@ use DacSanNhaDan\Core\AppException;
 use DacSanNhaDan\Core\Autoloader;
 use DacSanNhaDan\Core\Database;
 use DacSanNhaDan\Repositories\InventoryRepository;
+use DacSanNhaDan\Repositories\AdminDashboardRepository;
 use DacSanNhaDan\Repositories\OrderRepository;
 use DacSanNhaDan\Repositories\PurchasePlanRepository;
 use DacSanNhaDan\Services\InventoryService;
+use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Services\OrderService;
 use DacSanNhaDan\Services\PurchasePlanService;
 
@@ -35,6 +37,14 @@ if ((getenv('DB_DATABASE') ?: '') !== 'dac_san_nha_dan_test') {
 
 require dirname(__DIR__) . '/app/bootstrap.php';
 $pdo = Database::connection();
+$adminService = new AdminService(new AdminDashboardRepository($pdo));
+$orderList = $adminService->orders(['page' => 1, 'per_page' => 20]);
+assertTrue(isset($orderList['pagination']), 'Order list must include pagination.');
+assertSameValue(20, $orderList['pagination']['per_page'], 'Order list must honor allowed page size.');
+$productList = $adminService->products(['page' => 1, 'per_page' => 20, 'q' => 'bò']);
+assertTrue(isset($productList['pagination']), 'Product list must include pagination.');
+$planList = $adminService->purchasePlans(['page' => 1, 'per_page' => 20]);
+assertTrue(isset($planList['pagination']), 'PO list must include pagination.');
 $inventory = new InventoryService(new InventoryRepository($pdo));
 $service = new PurchasePlanService(
     $pdo,

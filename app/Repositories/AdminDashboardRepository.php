@@ -79,11 +79,14 @@ final class AdminDashboardRepository
 
         $search = (string) ($filters['q'] ?? '');
         if ($search !== '') {
-            $where[] = '(o.order_id LIKE :q OR o.customer_name LIKE :q OR o.customer_phone LIKE :q)';
-            $params['q'] = '%' . $search . '%';
+            $where[] = '(o.order_id LIKE :q_order OR o.customer_name LIKE :q_name OR o.customer_phone LIKE :q_phone)';
+            $params['q_order'] = '%' . $search . '%';
+            $params['q_name'] = '%' . $search . '%';
+            $params['q_phone'] = '%' . $search . '%';
         }
 
-        $limit = $this->limit($filters['limit'] ?? 50);
+        $limit = $this->limit($filters['per_page'] ?? $filters['limit'] ?? 50);
+        $offset = $this->offset($filters['offset'] ?? 0);
         $whereSql = $where === [] ? '1=1' : implode(' AND ', $where);
         $statement = $this->pdo->prepare(
             "SELECT o.order_id, o.created_at, o.STATUS AS status, o.customer_name,
@@ -98,11 +101,20 @@ final class AdminDashboardRepository
              FROM orders o
              WHERE $whereSql
              ORDER BY o.created_at DESC, o.order_id DESC
-             LIMIT $limit"
+             LIMIT $limit OFFSET $offset"
         );
         $statement->execute($params);
 
         return $statement->fetchAll();
+    }
+
+    /** @param array<string, mixed> $filters */
+    public function countOrders(array $filters = []): int
+    {
+        [$whereSql, $params] = $this->orderFilterSql($filters);
+        $statement = $this->pdo->prepare("SELECT COUNT(*) FROM orders o WHERE $whereSql");
+        $statement->execute($params);
+        return (int) $statement->fetchColumn();
     }
 
     /**
@@ -187,8 +199,10 @@ final class AdminDashboardRepository
         $params = [];
         $search = (string) ($filters['q'] ?? '');
         if ($search !== '') {
-            $where[] = '(p.product_id LIKE :q OR p.product_name LIKE :q OR p.category_label LIKE :q)';
-            $params['q'] = '%' . $search . '%';
+            $where[] = '(p.product_id LIKE :q_id OR p.product_name LIKE :q_name OR p.category_label LIKE :q_category)';
+            $params['q_id'] = '%' . $search . '%';
+            $params['q_name'] = '%' . $search . '%';
+            $params['q_category'] = '%' . $search . '%';
         }
 
         if (array_key_exists('is_active', $filters) && $filters['is_active'] !== '') {
@@ -196,7 +210,8 @@ final class AdminDashboardRepository
             $params['is_active'] = (int) $filters['is_active'];
         }
 
-        $limit = $this->limit($filters['limit'] ?? 100);
+        $limit = $this->limit($filters['per_page'] ?? $filters['limit'] ?? 50);
+        $offset = $this->offset($filters['offset'] ?? 0);
         $whereSql = $where === [] ? '1=1' : implode(' AND ', $where);
         $statement = $this->pdo->prepare(
             "SELECT p.product_id, p.product_name, p.product_slug, p.category_id,
@@ -218,11 +233,34 @@ final class AdminDashboardRepository
              ) i ON i.product_id = p.product_id
              WHERE $whereSql
              ORDER BY p.is_active DESC, p.category_label, p.product_name
-             LIMIT $limit"
+             LIMIT $limit OFFSET $offset"
         );
         $statement->execute($params);
 
         return $statement->fetchAll();
+    }
+
+    /** @param array<string, mixed> $filters */
+    public function countProducts(array $filters = []): int
+    {
+        $where = [];
+        $params = [];
+        $search = (string) ($filters['q'] ?? '');
+        if ($search !== '') {
+            $where[] = '(p.product_id LIKE :q_id OR p.product_name LIKE :q_name OR p.category_label LIKE :q_category)';
+            $params['q_id'] = '%' . $search . '%';
+            $params['q_name'] = '%' . $search . '%';
+            $params['q_category'] = '%' . $search . '%';
+        }
+        if (array_key_exists('is_active', $filters) && $filters['is_active'] !== '') {
+            $where[] = 'p.is_active = :is_active';
+            $params['is_active'] = (int) $filters['is_active'];
+        }
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM products p WHERE ' . ($where === [] ? '1=1' : implode(' AND ', $where))
+        );
+        $statement->execute($params);
+        return (int) $statement->fetchColumn();
     }
 
     /**
@@ -243,7 +281,8 @@ final class AdminDashboardRepository
      */
     public function inventory(array $filters = []): array
     {
-        $limit = $this->limit($filters['limit'] ?? 100);
+        $limit = $this->limit($filters['per_page'] ?? $filters['limit'] ?? 50);
+        $offset = $this->offset($filters['offset'] ?? 0);
         $summary = $this->pdo->query(
             'SELECT product_id, product_name, base_uom_label, default_source,
                     qty_base_on_hand, qty_base_reserved, qty_base_available,
@@ -306,7 +345,8 @@ final class AdminDashboardRepository
             $params['status'] = $status;
         }
 
-        $limit = $this->limit($filters['limit'] ?? 100);
+        $limit = $this->limit($filters['per_page'] ?? $filters['limit'] ?? 50);
+        $offset = $this->offset($filters['offset'] ?? 0);
         $whereSql = $where === [] ? '1=1' : implode(' AND ', $where);
         $statement = $this->pdo->prepare(
             "SELECT pp.plan_id, pp.created_at, pp.order_from_date, pp.order_to_date,
@@ -321,11 +361,26 @@ final class AdminDashboardRepository
              WHERE $whereSql
              GROUP BY pp.plan_id
              ORDER BY pp.created_at DESC, pp.plan_id DESC
-             LIMIT $limit"
+             LIMIT $limit OFFSET $offset"
         );
         $statement->execute($params);
 
         return $statement->fetchAll();
+    }
+
+    /** @param array<string, mixed> $filters */
+    public function countPurchasePlans(array $filters = []): int
+    {
+        $status = (string) ($filters['status'] ?? '');
+        $sql = 'SELECT COUNT(*) FROM purchase_plans pp';
+        $params = [];
+        if ($status !== '') {
+            $sql .= ' WHERE pp.STATUS = :status';
+            $params['status'] = $status;
+        }
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($params);
+        return (int) $statement->fetchColumn();
     }
 
     /**
@@ -385,6 +440,39 @@ final class AdminDashboardRepository
             return 50;
         }
 
-        return min($limit, 200);
+        return min($limit, 100);
+    }
+
+    private function offset(mixed $value): int
+    {
+        return max(0, (int) $value);
+    }
+
+    /** @param array<string, mixed> $filters
+     *  @return array{0: string, 1: array<string, mixed>}
+     */
+    private function orderFilterSql(array $filters): array
+    {
+        $where = [];
+        $params = [];
+        if (($filters['status'] ?? '') !== '') {
+            $where[] = 'o.STATUS = :status';
+            $params['status'] = (string) $filters['status'];
+        }
+        if (($filters['date_from'] ?? '') !== '') {
+            $where[] = 'DATE(o.created_at) >= :date_from';
+            $params['date_from'] = (string) $filters['date_from'];
+        }
+        if (($filters['date_to'] ?? '') !== '') {
+            $where[] = 'DATE(o.created_at) <= :date_to';
+            $params['date_to'] = (string) $filters['date_to'];
+        }
+        if (($filters['q'] ?? '') !== '') {
+            $where[] = '(o.order_id LIKE :q_order OR o.customer_name LIKE :q_name OR o.customer_phone LIKE :q_phone)';
+            $params['q_order'] = '%' . (string) $filters['q'] . '%';
+            $params['q_name'] = '%' . (string) $filters['q'] . '%';
+            $params['q_phone'] = '%' . (string) $filters['q'] . '%';
+        }
+        return [$where === [] ? '1=1' : implode(' AND ', $where), $params];
     }
 }

@@ -50,3 +50,4 @@ use DacSanNhaDan\Support\Formatter;
         </tbody>
     </table>
 </section>
+<?php require __DIR__ . '/pagination.php'; ?>

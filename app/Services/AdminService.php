@@ -46,10 +46,11 @@ final class AdminService
             }
         }
 
-        return [
-            'items' => $this->dashboard->listOrders($clean),
-            'filters' => $clean,
-        ];
+        return $this->paginated(
+            $this->dashboard->listOrders($clean),
+            $this->dashboard->countOrders($clean),
+            $clean
+        );
     }
 
     /**
@@ -94,11 +95,11 @@ final class AdminService
             $clean['is_active'] = ((int) $filters['is_active']) === 1 ? 1 : 0;
         }
 
-        return [
-            'items' => $this->dashboard->listProducts($clean),
-            'categories' => $this->dashboard->categories(),
-            'filters' => $clean,
-        ];
+        return $this->paginated(
+            $this->dashboard->listProducts($clean),
+            $this->dashboard->countProducts($clean),
+            $clean
+        ) + ['categories' => $this->dashboard->categories()];
     }
 
     /**
@@ -127,10 +128,11 @@ final class AdminService
             $clean['status'] = $status;
         }
 
-        return [
-            'items' => $this->dashboard->listPurchasePlans($clean),
-            'filters' => $clean,
-        ];
+        return $this->paginated(
+            $this->dashboard->listPurchasePlans($clean),
+            $this->dashboard->countPurchasePlans($clean),
+            $clean
+        );
     }
 
     /**
@@ -165,8 +167,15 @@ final class AdminService
      */
     private function cleanListFilters(array $filters): array
     {
+        $page = max(1, (int) ($filters['p'] ?? $filters['page'] ?? 1));
+        $perPage = (int) ($filters['per_page'] ?? $filters['limit'] ?? 50);
+        if (!in_array($perPage, [20, 50, 100], true)) {
+            $perPage = 50;
+        }
         $clean = [
-            'limit' => $this->cleanLimit($filters['limit'] ?? 50),
+            'page' => $page,
+            'per_page' => $perPage,
+            'offset' => ($page - 1) * $perPage,
         ];
 
         $query = trim((string) ($filters['q'] ?? ''));
@@ -178,6 +187,26 @@ final class AdminService
         }
 
         return $clean;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $items
+     * @param array<string, mixed> $filters
+     * @return array<string, mixed>
+     */
+    private function paginated(array $items, int $total, array $filters): array
+    {
+        $perPage = (int) $filters['per_page'];
+        return [
+            'items' => $items,
+            'pagination' => [
+                'page' => (int) $filters['page'],
+                'per_page' => $perPage,
+                'total' => $total,
+                'total_pages' => $total === 0 ? 0 : (int) ceil($total / $perPage),
+            ],
+            'filters' => $filters,
+        ];
     }
 
     private function cleanLimit(mixed $value): int

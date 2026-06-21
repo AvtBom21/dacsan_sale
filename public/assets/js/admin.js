@@ -11,6 +11,8 @@
 
     async function adminRequest(action, options = {}) {
         const requestOptions = { ...options };
+        const query = requestOptions.query || {};
+        delete requestOptions.query;
         const headers = {
             Accept: 'application/json',
             'X-CSRF-Token': window.DSND_ADMIN.csrfToken,
@@ -22,8 +24,9 @@
         }
 
         const separator = window.DSND_ADMIN.apiBase.includes('?') ? '&' : '?';
+        const queryString = new URLSearchParams({ action, ...query }).toString();
         const response = await fetch(
-            `${window.DSND_ADMIN.apiBase}${separator}action=${encodeURIComponent(action)}`,
+            `${window.DSND_ADMIN.apiBase}${separator}${queryString}`,
             {
                 credentials: 'same-origin',
                 ...requestOptions,
@@ -265,6 +268,124 @@
         });
     }
 
+    const poBuilder = document.querySelector('[data-po-builder]');
+    if (poBuilder) {
+        const selectedOrderIds = () => Array.from(document.querySelectorAll('[data-po-order]:checked'))
+            .map((checkbox) => checkbox.value);
+        const errorNode = poBuilder.querySelector('[data-po-error]');
+        const previewPanel = poBuilder.querySelector('[data-po-preview-panel]');
+
+        poBuilder.querySelector('[data-po-preview]')?.addEventListener('click', async (event) => {
+            const button = event.currentTarget;
+            button.disabled = true;
+            errorNode.hidden = true;
+            try {
+                const preview = await adminRequest('po-preview', {
+                    method: 'POST',
+                    body: JSON.stringify({ order_ids: selectedOrderIds() }),
+                });
+                previewPanel.innerHTML = renderPoPreview(preview);
+                previewPanel.hidden = false;
+            } catch (error) {
+                errorNode.textContent = error.message || 'Không thể xem trước PO.';
+                errorNode.hidden = false;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        poBuilder.querySelector('[data-po-create]')?.addEventListener('click', async (event) => {
+            const orderIds = selectedOrderIds();
+            if (!window.confirm(`Tạo PO từ ${orderIds.length} đơn đã chọn?`)) return;
+            const button = event.currentTarget;
+            button.disabled = true;
+            errorNode.hidden = true;
+            try {
+                const result = await adminRequest('create-po', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        order_ids: orderIds,
+                        note: poBuilder.querySelector('[data-po-note]')?.value || '',
+                    }),
+                });
+                window.location.href = `./?page=purchase-plan-detail&id=${encodeURIComponent(result.plan_id)}`;
+            } catch (error) {
+                errorNode.textContent = error.message || 'Không thể tạo PO.';
+                errorNode.hidden = false;
+                button.disabled = false;
+            }
+        });
+    }
+
+    document.querySelector('[data-po-copy]')?.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const errorNode = document.querySelector('[data-po-error]');
+        try {
+            const result = await adminRequest('po-copy-text', {
+                method: 'GET',
+                query: { plan_id: button.dataset.planId || '' },
+            });
+            await copyText(result.text || '');
+            button.textContent = 'Đã sao chép';
+        } catch (error) {
+            errorNode.textContent = error.message || 'Không thể sao chép PO.';
+            errorNode.hidden = false;
+        }
+    });
+
+    document.querySelector('[data-po-cancel]')?.addEventListener('click', async (event) => {
+        if (!window.confirm('Hủy PO này và trả các đơn về trạng thái đã xác nhận?')) return;
+        const button = event.currentTarget;
+        const errorNode = document.querySelector('[data-po-error]');
+        button.disabled = true;
+        try {
+            await adminRequest('po-cancel', {
+                method: 'POST',
+                body: JSON.stringify({ plan_id: button.dataset.planId || '' }),
+            });
+            window.location.reload();
+        } catch (error) {
+            errorNode.textContent = error.message || 'Không thể hủy PO.';
+            errorNode.hidden = false;
+            button.disabled = false;
+        }
+    });
+
+    const poReceiveForm = document.querySelector('[data-po-receive]');
+    if (poReceiveForm) {
+        poReceiveForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const errorNode = document.querySelector('[data-po-error]');
+            const submit = poReceiveForm.querySelector('button[type="submit"]');
+            const items = Array.from(poReceiveForm.querySelectorAll('[data-po-receive-row]')).map((row) => ({
+                plan_item_id: Number(row.dataset.planItemId || 0),
+                qty_received_uom: fieldValue(row, '[data-receive="qty_received_uom"]'),
+                cost_per_uom_vnd: fieldValue(row, '[data-receive="cost_per_uom_vnd"]'),
+                received_date: fieldValue(row, '[data-receive="received_date"]'),
+                expiry_date: fieldValue(row, '[data-receive="expiry_date"]'),
+                supplier_name: fieldValue(row, '[data-receive="supplier_name"]'),
+                note: fieldValue(row, '[data-receive="note"]'),
+            }));
+            submit.disabled = true;
+            errorNode.hidden = true;
+            try {
+                await adminRequest('receive-po', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        plan_id: poReceiveForm.dataset.planId || '',
+                        note: poReceiveForm.elements.note.value,
+                        items,
+                    }),
+                });
+                window.location.reload();
+            } catch (error) {
+                errorNode.textContent = error.message || 'Không thể nhận hàng PO.';
+                errorNode.hidden = false;
+                submit.disabled = false;
+            }
+        });
+    }
+
     function fieldValue(root, selector) {
         return root.querySelector(selector)?.value?.trim() || '';
     }
@@ -472,5 +593,30 @@
             node.textContent = '';
             node.hidden = true;
         }
+    }
+
+    function renderPoPreview(preview) {
+        const rows = (preview.items || []).map((item) => `<tr>
+            <td>${escapeHtml(String(item.product_name_snapshot || ''))}</td>
+            <td>${escapeHtml(String(item.source_location || ''))}</td>
+            <td>${escapeHtml(String(item.qty_planned_uom || 0))} ${escapeHtml(String(item.uom_label_snapshot || ''))}</td>
+        </tr>`).join('');
+        return `<p><strong>${Number(preview.order_count || 0)}</strong> đơn · nguồn ${escapeHtml(String(preview.supplier_scope || ''))}</p>
+            <div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Nguồn</th><th>Số lượng</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    async function copyText(text) {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
     }
 })();

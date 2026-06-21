@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use DacSanNhaDan\Support\Formatter;
 
+$canManagePlans = ($capabilities['purchase_plans_manage'] ?? false) === true;
 ?>
 <section class="toolbar">
     <form method="get">
@@ -18,10 +19,25 @@ use DacSanNhaDan\Support\Formatter;
         <button>Lọc</button>
     </form>
 </section>
+<?php if ($canManagePlans): ?>
+<section class="panel no-print" data-po-builder>
+    <div class="section-heading">
+        <div><span class="eyebrow">Purchase Plan</span><h2>Gom đơn đã xác nhận</h2></div>
+        <div class="page-actions">
+            <button type="button" class="button-secondary" data-po-preview>Xem trước PO</button>
+            <button type="button" class="button" data-po-create>Tạo PO</button>
+        </div>
+    </div>
+    <label>Ghi chú PO<input data-po-note maxlength="2000"></label>
+    <p class="field-error" data-po-error hidden></p>
+    <div class="po-preview" data-po-preview-panel hidden></div>
+</section>
+<?php endif; ?>
 <section class="table-wrap">
     <table>
         <thead>
             <tr>
+                <?php if ($canManagePlans): ?><th>Chọn</th><?php endif; ?>
                 <th>Mã đơn</th>
                 <th>Thời điểm</th>
                 <th>Khách</th>
@@ -33,6 +49,17 @@ use DacSanNhaDan\Support\Formatter;
         <tbody>
             <?php foreach ($data['items'] as $order): ?>
                 <tr>
+                    <?php if ($canManagePlans): ?>
+                        <td>
+                            <input
+                                type="checkbox"
+                                data-po-order
+                                value="<?= Formatter::h((string) $order['order_id']) ?>"
+                                <?= ((string) $order['status'] === 'confirmed' && (int) ($order['unplanned_item_count'] ?? 0) > 0) ? '' : 'disabled' ?>
+                                aria-label="Chọn đơn <?= Formatter::h((string) $order['order_id']) ?>"
+                            >
+                        </td>
+                    <?php endif; ?>
                     <td>
                         <a href="./?page=order-detail&amp;id=<?= rawurlencode((string) $order['order_id']) ?>">
                             <?= Formatter::h((string) $order['order_id']) ?>
@@ -46,7 +73,7 @@ use DacSanNhaDan\Support\Formatter;
                 </tr>
             <?php endforeach; ?>
             <?php if ($data['items'] === []): ?>
-                <tr><td colspan="6">Chưa có đơn phù hợp.</td></tr>
+                <tr><td colspan="<?= $canManagePlans ? 7 : 6 ?>">Chưa có đơn phù hợp.</td></tr>
             <?php endif; ?>
         </tbody>
     </table>

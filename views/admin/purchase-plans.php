@@ -34,7 +34,7 @@ use DacSanNhaDan\Support\Formatter;
         <tbody>
             <?php foreach ($data['items'] as $plan): ?>
                 <tr>
-                    <td><?= Formatter::h((string) $plan['plan_id']) ?></td>
+                    <td><a href="./?page=purchase-plan-detail&amp;id=<?= rawurlencode((string) $plan['plan_id']) ?>"><?= Formatter::h((string) $plan['plan_id']) ?></a></td>
                     <td><?= Formatter::h((string) $plan['created_at']) ?></td>
                     <td><?= Formatter::h((string) $plan['order_from_date'] . ' → ' . (string) $plan['order_to_date']) ?></td>
                     <td><?= Formatter::h((string) $plan['supplier_scope']) ?></td>

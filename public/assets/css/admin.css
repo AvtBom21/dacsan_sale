@@ -805,3 +805,23 @@ th {
         break-inside: avoid;
     }
 }
+
+.po-preview {
+    margin-top: 1rem;
+}
+
+.receipt-card {
+    display: grid;
+    gap: .35rem;
+    padding: .9rem 0;
+    border-bottom: 1px solid var(--line, #e5e7eb);
+}
+
+.receipt-card:last-child {
+    border-bottom: 0;
+}
+
+.receipt-card ul {
+    margin: .35rem 0 0;
+    padding-left: 1.2rem;
+}

@@ -88,7 +88,13 @@ final class AdminDashboardRepository
         $statement = $this->pdo->prepare(
             "SELECT o.order_id, o.created_at, o.STATUS AS status, o.customer_name,
                     o.customer_phone, o.receive_date, o.shipping_method,
-                    o.total_vnd, o.source_summary
+                    o.total_vnd, o.source_summary,
+                    (
+                        SELECT COUNT(*)
+                        FROM order_items oi
+                        WHERE oi.order_id = o.order_id
+                          AND oi.planned_plan_id IS NULL
+                    ) AS unplanned_item_count
              FROM orders o
              WHERE $whereSql
              ORDER BY o.created_at DESC, o.order_id DESC

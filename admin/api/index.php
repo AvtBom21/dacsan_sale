@@ -313,6 +313,7 @@ try {
     }
 
     if ($action === 'po-detail') {
+        admin_api_require_method('GET');
         $detail = $purchasePlanService->getDetail(admin_api_required_id('plan_id'));
         if ($detail === null) {
             throw new AppException('Không tìm thấy PO.', 404);
@@ -322,6 +323,7 @@ try {
     }
 
     if ($action === 'po-copy-text') {
+        admin_api_require_method('GET');
         Response::ok([
             'text' => $purchasePlanService->copyPurchasePlanText(admin_api_required_id('plan_id')),
         ]);

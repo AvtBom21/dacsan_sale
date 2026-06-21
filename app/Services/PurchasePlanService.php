@@ -230,7 +230,11 @@ final class PurchasePlanService
                     throw new AppException('Dòng PO nhận hàng không tồn tại.', 422);
                 }
 
-                $qtyUom = round((float) ($rawItem['qty_received_uom'] ?? 0), 3);
+                $qtyUom = $this->normalizeDecimal(
+                    $rawItem['qty_received_uom'] ?? 0,
+                    'Số lượng nhận không hợp lệ.',
+                    true
+                );
                 if ($qtyUom <= 0) {
                     continue;
                 }
@@ -252,8 +256,14 @@ final class PurchasePlanService
                 $qtyBase = round($qtyUom * $conversion, 3);
                 $receivedDate = $this->normalizeDate($rawItem['received_date'] ?? date('Y-m-d'), 'Ngày nhận hàng không hợp lệ.');
                 $expiryDate = $this->normalizeOptionalDate($rawItem['expiry_date'] ?? null, 'Hạn dùng không hợp lệ.');
+                if ($expiryDate !== null && $expiryDate < $receivedDate) {
+                    throw new AppException('Hạn dùng không được trước ngày nhận hàng.', 422);
+                }
                 $supplierName = trim((string) ($rawItem['supplier_name'] ?? ''));
                 $lineNote = trim((string) ($rawItem['note'] ?? ''));
+                if (mb_strlen($supplierName, 'UTF-8') > 160 || mb_strlen($lineNote, 'UTF-8') > 2000) {
+                    throw new AppException('Thông tin nhà cung cấp hoặc ghi chú quá dài.', 422);
+                }
                 $costPerUom = $this->normalizeMoney(
                     $rawItem['cost_per_uom_vnd'] ?? $item['cost_per_uom_vnd'],
                     'Giá nhập không hợp lệ.'
@@ -354,7 +364,38 @@ final class PurchasePlanService
      */
     public function getDetail(string $planId): ?array
     {
-        return $this->plans->getPlanDetail($planId);
+        $detail = $this->plans->getPlanDetail($this->normalizePlanId($planId));
+        if ($detail === null) {
+            return null;
+        }
+
+        $canReceive = false;
+        foreach ($detail['items'] as &$item) {
+            $remaining = max(
+                0,
+                round((float) $item['qty_planned_uom'] - (float) $item['qty_received_uom'], 3)
+            );
+            $item['qty_remaining_uom'] = $remaining;
+            $item['can_receive'] = $remaining > 0.0001;
+            $canReceive = $canReceive || $item['can_receive'];
+        }
+        unset($item);
+
+        $receiptItems = [];
+        foreach ($detail['receipt_items'] as $item) {
+            $receiptItems[(string) $item['receipt_id']][] = $item;
+        }
+        foreach ($detail['receipts'] as &$receipt) {
+            $receipt['items'] = $receiptItems[(string) $receipt['receipt_id']] ?? [];
+        }
+        unset($receipt);
+
+        $status = (string) $detail['status'];
+        $detail['can_receive'] = $canReceive && in_array($status, ['ordered', 'partial_received'], true);
+        $detail['can_cancel'] = in_array($status, ['draft', 'ordered'], true)
+            && $detail['receipts'] === [];
+
+        return $detail;
     }
 
     /**
@@ -506,11 +547,25 @@ final class PurchasePlanService
         }
 
         $money = (int) round((float) $value);
-        if ($money < 0) {
+        if ($money < 0 || $money > 2147483647) {
             throw new AppException($message, 422);
         }
 
         return $money;
+    }
+
+    private function normalizeDecimal(mixed $value, string $message, bool $allowZero = false): float
+    {
+        if (!is_numeric($value) || !is_finite((float) $value)) {
+            throw new AppException($message, 422);
+        }
+        $number = round((float) $value, 3);
+        $minimum = $allowZero ? 0.0 : 0.001;
+        if ($number < $minimum || $number > 999999999.999) {
+            throw new AppException($message, 422);
+        }
+
+        return $number;
     }
 
     private function uniquePlanId(): string

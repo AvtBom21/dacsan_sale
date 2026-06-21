@@ -10,11 +10,16 @@ use DacSanNhaDan\Repositories\AdminDashboardRepository;
 use DacSanNhaDan\Repositories\AdminProductRepository;
 use DacSanNhaDan\Repositories\AdminUserRepository;
 use DacSanNhaDan\Repositories\InventoryRepository;
+use DacSanNhaDan\Repositories\OrderRepository;
+use DacSanNhaDan\Repositories\PurchasePlanRepository;
 use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
 use DacSanNhaDan\Services\AdminInventoryService;
 use DacSanNhaDan\Services\AdminProductService;
 use DacSanNhaDan\Services\AdminService;
+use DacSanNhaDan\Services\InventoryService;
+use DacSanNhaDan\Services\OrderService;
+use DacSanNhaDan\Services\PurchasePlanService;
 use DacSanNhaDan\Support\Logger;
 
 /**
@@ -112,6 +117,7 @@ function admin_navigation_capabilities(
         'products_manage' => $authorization->allows($role, 'products.manage'),
         'settings_manage' => $authorization->allows($role, 'settings.manage'),
         'inventory_manage' => $authorization->allows($role, 'inventory.manage'),
+        'purchase_plans_manage' => $authorization->allows($role, 'purchase_plans.manage'),
     ];
 }
 
@@ -128,6 +134,13 @@ try {
     $admin = new AdminService(new AdminDashboardRepository($pdo));
     $adminProducts = new AdminProductService($pdo, new AdminProductRepository($pdo));
     $adminInventory = new AdminInventoryService($pdo, new InventoryRepository($pdo));
+    $inventoryService = new InventoryService(new InventoryRepository($pdo));
+    $purchasePlans = new PurchasePlanService(
+        $pdo,
+        new PurchasePlanRepository($pdo),
+        new OrderService($pdo, new OrderRepository($pdo), $inventoryService),
+        $inventoryService
+    );
     $error = null;
     $user = null;
 
@@ -161,7 +174,14 @@ try {
     $role = (string) $user['role'];
     admin_require_page_permission($authorization, $role, $page);
     $pageId = admin_page_id_from_value($page, $_GET['id'] ?? null);
-    $data = admin_page_data($admin, $page, $pageId, $adminProducts, $adminInventory);
+    $data = admin_page_data(
+        $admin,
+        $page,
+        $pageId,
+        $adminProducts,
+        $adminInventory,
+        $purchasePlans
+    );
     $capabilities = admin_navigation_capabilities($authorization, $role);
     $csrfToken = Csrf::adminToken();
 
@@ -198,7 +218,8 @@ function admin_page_data(
     string $page,
     ?string $pageId = null,
     ?AdminProductService $adminProducts = null,
-    ?AdminInventoryService $adminInventory = null
+    ?AdminInventoryService $adminInventory = null,
+    ?PurchasePlanService $purchasePlans = null
 ): array
 {
     return match ($page) {
@@ -211,7 +232,7 @@ function admin_page_data(
         'product-detail' => admin_product_detail_data($adminProducts, $pageId),
         'product-form' => admin_product_form_data($adminProducts, $pageId),
         'inventory-lot' => admin_inventory_lot_data($adminInventory, $pageId),
-        'purchase-plan-detail',
+        'purchase-plan-detail' => admin_purchase_plan_detail_data($purchasePlans, $pageId),
         'admin-users' => [
             'id' => $pageId,
             'page' => $page,
@@ -219,6 +240,20 @@ function admin_page_data(
         ],
         default => $admin->dashboard(),
     };
+}
+
+/** @return array<string, mixed> */
+function admin_purchase_plan_detail_data(?PurchasePlanService $service, ?string $planId): array
+{
+    if ($service === null) {
+        throw new AppException('Dịch vụ PO chưa sẵn sàng.', 500);
+    }
+    $detail = $service->getDetail((string) $planId);
+    if ($detail === null) {
+        throw new AppException('Không tìm thấy PO.', 404);
+    }
+
+    return $detail;
 }
 
 /** @return array<string, mixed> */

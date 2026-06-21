@@ -406,7 +406,12 @@ INSERT INTO settings (setting_key, setting_value, note) VALUES
   ('store_phone', '0378456926', 'Số điện thoại nhận đơn'),
   ('zalo_link', 'https://zalo.me/0378456926', 'Link Zalo'),
   ('free_ship_threshold', '300000', 'Miễn phí ship khi đơn hàng >= ngưỡng này'),
-  ('default_shipping_zone_id', 'ZONE_HCM_INNER', 'Vùng giao hàng mặc định');
+  ('default_shipping_zone_id', 'ZONE_HCM_INNER', 'Vùng giao hàng mặc định'),
+  ('bank_name', '', 'Tên ngân hàng nhận chuyển khoản'),
+  ('bank_account_number', '', 'Số tài khoản nhận chuyển khoản'),
+  ('bank_account_holder', '', 'Chủ tài khoản nhận chuyển khoản'),
+  ('bank_transfer_content', 'THANH TOAN {order_id}', 'Nội dung chuyển khoản; hỗ trợ {order_id}'),
+  ('bank_qr_image_path', '', 'Ảnh QR chuyển khoản trong products_image');
 
 INSERT INTO shipping_zones (zone_id, zone_name, fee_vnd, is_default, is_active) VALUES
   ('ZONE_HCM_INNER', 'Nội thành HCM', 25000, 1, 1),

@@ -8,6 +8,7 @@ use DacSanNhaDan\Core\Database;
 use DacSanNhaDan\Core\Response;
 use DacSanNhaDan\Repositories\AdminDashboardRepository;
 use DacSanNhaDan\Repositories\AdminProductRepository;
+use DacSanNhaDan\Repositories\AdminSettingsRepository;
 use DacSanNhaDan\Repositories\AdminUserRepository;
 use DacSanNhaDan\Repositories\InventoryRepository;
 use DacSanNhaDan\Repositories\OrderRepository;
@@ -16,6 +17,7 @@ use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
 use DacSanNhaDan\Services\AdminInventoryService;
 use DacSanNhaDan\Services\AdminProductService;
+use DacSanNhaDan\Services\AdminSettingsService;
 use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Services\InventoryService;
 use DacSanNhaDan\Services\OrderService;
@@ -134,6 +136,7 @@ try {
     $admin = new AdminService(new AdminDashboardRepository($pdo));
     $adminProducts = new AdminProductService($pdo, new AdminProductRepository($pdo));
     $adminInventory = new AdminInventoryService($pdo, new InventoryRepository($pdo));
+    $adminSettings = new AdminSettingsService($pdo, new AdminSettingsRepository($pdo));
     $inventoryService = new InventoryService(new InventoryRepository($pdo));
     $purchasePlans = new PurchasePlanService(
         $pdo,
@@ -180,7 +183,8 @@ try {
         $pageId,
         $adminProducts,
         $adminInventory,
-        $purchasePlans
+        $purchasePlans,
+        $adminSettings
     );
     $capabilities = admin_navigation_capabilities($authorization, $role);
     $csrfToken = Csrf::adminToken();
@@ -219,7 +223,8 @@ function admin_page_data(
     ?string $pageId = null,
     ?AdminProductService $adminProducts = null,
     ?AdminInventoryService $adminInventory = null,
-    ?PurchasePlanService $purchasePlans = null
+    ?PurchasePlanService $purchasePlans = null,
+    ?AdminSettingsService $adminSettings = null
 ): array
 {
     return match ($page) {
@@ -227,7 +232,7 @@ function admin_page_data(
         'products' => $admin->products(admin_ui_filters()),
         'inventory' => $admin->inventory(admin_ui_filters()),
         'purchase-plans' => $admin->purchasePlans(admin_ui_filters()),
-        'settings' => $admin->settings(),
+        'settings' => $adminSettings?->page() ?? $admin->settings(),
         'order-detail' => admin_order_detail_data($admin, $pageId),
         'product-detail' => admin_product_detail_data($adminProducts, $pageId),
         'product-form' => admin_product_form_data($adminProducts, $pageId),

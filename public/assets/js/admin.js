@@ -386,6 +386,80 @@
         });
     }
 
+    const settingsForm = document.querySelector('[data-settings-form]');
+    if (settingsForm) {
+        settingsForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const errorNode = settingsForm.querySelector('[data-settings-error]');
+            const submit = settingsForm.querySelector('button[type="submit"]');
+            const settings = Object.fromEntries(new FormData(settingsForm).entries());
+            submit.disabled = true;
+            errorNode.hidden = true;
+            try {
+                await adminRequest('settings-update', {
+                    method: 'POST',
+                    body: JSON.stringify({ settings }),
+                });
+                window.location.reload();
+            } catch (error) {
+                errorNode.textContent = error.message || 'Không thể lưu cài đặt.';
+                errorNode.hidden = false;
+                submit.disabled = false;
+            }
+        });
+    }
+
+    document.querySelectorAll('[data-zone-form]').forEach((form) => {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const errorNode = document.querySelector('[data-zone-error]');
+            const submit = form.querySelector('button[type="submit"]');
+            const values = Object.fromEntries(new FormData(form).entries());
+            values.is_active = form.elements.is_active?.checked ? 1 : 0;
+            values.is_default = form.elements.is_default?.checked ? 1 : 0;
+            submit.disabled = true;
+            if (errorNode) errorNode.hidden = true;
+            try {
+                await adminRequest('shipping-zone-save', {
+                    method: 'POST',
+                    body: JSON.stringify(values),
+                });
+                window.location.reload();
+            } catch (error) {
+                if (errorNode) {
+                    errorNode.textContent = error.message || 'Không thể lưu vùng giao hàng.';
+                    errorNode.hidden = false;
+                }
+                submit.disabled = false;
+            }
+        });
+    });
+
+    document.addEventListener('click', async (event) => {
+        const activeButton = event.target.closest('[data-zone-active]');
+        const defaultButton = event.target.closest('[data-zone-default]');
+        if (!activeButton && !defaultButton) return;
+        const form = event.target.closest('[data-zone-form]');
+        const zoneId = form?.elements.zone_id.value || '';
+        const errorNode = document.querySelector('[data-zone-error]');
+        event.target.disabled = true;
+        try {
+            await adminRequest(activeButton ? 'shipping-zone-active' : 'shipping-zone-default', {
+                method: 'POST',
+                body: JSON.stringify(activeButton
+                    ? { zone_id: zoneId, is_active: Number(activeButton.dataset.zoneActive || 0) }
+                    : { zone_id: zoneId }),
+            });
+            window.location.reload();
+        } catch (error) {
+            if (errorNode) {
+                errorNode.textContent = error.message || 'Không thể cập nhật vùng giao hàng.';
+                errorNode.hidden = false;
+            }
+            event.target.disabled = false;
+        }
+    });
+
     function fieldValue(root, selector) {
         return root.querySelector(selector)?.value?.trim() || '';
     }

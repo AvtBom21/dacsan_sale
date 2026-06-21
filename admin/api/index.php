@@ -9,6 +9,7 @@ use DacSanNhaDan\Core\Request;
 use DacSanNhaDan\Core\Response;
 use DacSanNhaDan\Repositories\AdminDashboardRepository;
 use DacSanNhaDan\Repositories\AdminProductRepository;
+use DacSanNhaDan\Repositories\AdminSettingsRepository;
 use DacSanNhaDan\Repositories\AdminUserRepository;
 use DacSanNhaDan\Repositories\CustomerRepository;
 use DacSanNhaDan\Repositories\InventoryRepository;
@@ -21,6 +22,7 @@ use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
 use DacSanNhaDan\Services\AdminInventoryService;
 use DacSanNhaDan\Services\AdminProductService;
+use DacSanNhaDan\Services\AdminSettingsService;
 use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Services\CartQuoteService;
 use DacSanNhaDan\Services\CheckoutService;
@@ -44,6 +46,7 @@ try {
     $adminProducts = new AdminProductService($pdo, $adminProductRepository);
     $inventoryRepository = new InventoryRepository($pdo);
     $adminInventory = new AdminInventoryService($pdo, $inventoryRepository);
+    $adminSettings = new AdminSettingsService($pdo, new AdminSettingsRepository($pdo));
     $uploads = new UploadService(dirname(__DIR__, 2));
 
     if ($action === '' || $action === 'health') {
@@ -282,16 +285,42 @@ try {
 
     if ($action === 'settings') {
         admin_api_require_method('GET');
-        Response::ok($admin->settings());
+        Response::ok($adminSettings->page());
         return;
     }
 
-    if ($action === 'setting-update') {
+    if ($action === 'settings-update') {
         admin_api_require_method('POST');
         $body = Request::json();
         Csrf::requireAdminToken(admin_api_csrf($body));
-        $admin->updateSetting((string) ($body['setting_key'] ?? ''), (string) ($body['setting_value'] ?? ''));
-        Response::ok(['message' => 'Đã cập nhật setting.']);
+        Response::ok($adminSettings->updateSettings($body));
+        return;
+    }
+
+    if ($action === 'shipping-zone-save') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminSettings->saveZone($body));
+        return;
+    }
+
+    if ($action === 'shipping-zone-active') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminSettings->setZoneActive(
+            admin_api_body_id($body, 'zone_id'),
+            ((int) ($body['is_active'] ?? 0)) === 1
+        ));
+        return;
+    }
+
+    if ($action === 'shipping-zone-default') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminSettings->setZoneDefault(admin_api_body_id($body, 'zone_id')));
         return;
     }
 
@@ -422,7 +451,10 @@ function admin_api_action_permission(string $action): ?string
         'receive-po' => 'purchase_plans.manage',
         'po-cancel' => 'purchase_plans.manage',
         'settings' => 'settings.view',
-        'setting-update' => 'settings.manage',
+        'settings-update' => 'settings.manage',
+        'shipping-zone-save' => 'settings.manage',
+        'shipping-zone-active' => 'settings.manage',
+        'shipping-zone-default' => 'settings.manage',
         'payment-qr-upload' => 'settings.manage',
     ];
 

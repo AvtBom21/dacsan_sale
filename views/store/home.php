@@ -12,6 +12,8 @@ $mediaBase = $assetBase . '/media';
 $sectionMediaBase = $mediaBase . '/sections';
 $apiBase = ($directPublic ? $scriptDir : $appBase) . '/api';
 $productBase = $appBase === '' ? '' : $appBase;
+$storeCssVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/css/store.css') ?: time());
+$storeJsVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/js/store.js') ?: time());
 ?>
 <!doctype html>
 <html lang="vi">
@@ -20,7 +22,7 @@ $productBase = $appBase === '' ? '' : $appBase;
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Đặc Sản Nhà Dân - Đặc sản Gia Lai và Bình Định</title>
     <link rel="icon" type="image/svg+xml" href="<?= htmlspecialchars($assetBase, ENT_QUOTES, 'UTF-8') ?>/favicon.svg">
-    <link rel="stylesheet" href="<?= htmlspecialchars($assetBase, ENT_QUOTES, 'UTF-8') ?>/css/store.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetBase, ENT_QUOTES, 'UTF-8') ?>/css/store.css?v=<?= htmlspecialchars($storeCssVersion, ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body
     data-api-base="<?= htmlspecialchars($apiBase, ENT_QUOTES, 'UTF-8') ?>"
@@ -83,6 +85,17 @@ $productBase = $appBase === '' ? '' : $appBase;
                 <p class="section-label">Câu chuyện</p>
                 <h2>Khởi nguồn từ hai miền vị nhớ</h2>
                 <p>Một bên là nắng cao nguyên Gia Lai, một bên là vị biển Bình Định. Đặc Sản Nhà Dân chọn những món quen thuộc, dễ ăn, dễ làm quà và giữ đúng tinh thần món nhà làm.</p>
+                <div class="story-contact" data-store-contact hidden>
+                    <div class="story-contact-copy">
+                        <span>Thông tin liên hệ</span>
+                        <strong data-contact-phone-text></strong>
+                        <small>Hỗ trợ tư vấn và đặt hàng trực tiếp</small>
+                    </div>
+                    <div class="story-contact-actions">
+                        <a class="btn-secondary" data-contact-phone href="#">Gọi ngay</a>
+                        <a class="btn-primary" data-contact-zalo href="#" target="_blank" rel="noopener noreferrer">Nhắn Zalo</a>
+                    </div>
+                </div>
             </div>
             <div class="origin-grid" aria-label="Hai vùng đặc sản">
                 <article style="--card-bg: url('<?= htmlspecialchars($sectionMediaBase, ENT_QUOTES, 'UTF-8') ?>/highland-origin.jpeg')">
@@ -222,6 +235,6 @@ $productBase = $appBase === '' ? '' : $appBase;
         </div>
     </div>
 
-    <script src="<?= htmlspecialchars($assetBase, ENT_QUOTES, 'UTF-8') ?>/js/store.js"></script>
+    <script src="<?= htmlspecialchars($assetBase, ENT_QUOTES, 'UTF-8') ?>/js/store.js?v=<?= htmlspecialchars($storeJsVersion, ENT_QUOTES, 'UTF-8') ?>"></script>
 </body>
 </html>

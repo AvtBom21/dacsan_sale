@@ -2,6 +2,7 @@ const apiBase = document.body.dataset.apiBase || 'api';
 const productBase = document.body.dataset.productBase || '';
 const state = {
     products: [],
+    settings: {},
     cart: [],
     card: {},
     currentProduct: null,
@@ -82,6 +83,41 @@ function cardState(productId) {
 
 function formatMoney(value) {
     return `${Number(value || 0).toLocaleString('vi-VN')}đ`;
+}
+
+function formatPhoneDisplay(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length === 10) {
+        return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+    }
+    return String(value || '').trim();
+}
+
+function renderStoreContact() {
+    const root = document.querySelector('[data-store-contact]');
+    if (!root) return;
+
+    const phone = String(state.settings.store_phone || '').replace(/\D/g, '');
+    const zaloLink = String(state.settings.zalo_link || '').trim();
+    const phoneLink = root.querySelector('[data-contact-phone]');
+    const zaloAnchor = root.querySelector('[data-contact-zalo]');
+    const phoneText = root.querySelector('[data-contact-phone-text]');
+    const hasPhone = phone.length >= 9;
+    const hasZalo = /^https:\/\/zalo\.me\/[A-Za-z0-9._-]+(?:[/?#].*)?$/i.test(zaloLink);
+
+    if (phoneText) {
+        phoneText.hidden = !hasPhone;
+        phoneText.textContent = hasPhone ? formatPhoneDisplay(phone) : '';
+    }
+    if (phoneLink) {
+        phoneLink.hidden = !hasPhone;
+        if (hasPhone) phoneLink.href = `tel:${phone}`;
+    }
+    if (zaloAnchor) {
+        zaloAnchor.hidden = !hasZalo;
+        if (hasZalo) zaloAnchor.href = zaloLink;
+    }
+    root.hidden = !hasPhone && !hasZalo;
 }
 
 function toast(message, type = 'info') {
@@ -548,13 +584,16 @@ function toggleMobileNav(forceOpen) {
 async function initStorefront() {
     renderCart();
     try {
-        const [catalog, token] = await Promise.all([
+        const [catalog, token, settings] = await Promise.all([
             apiGet('catalog'),
-            apiGet('checkout-token')
+            apiGet('checkout-token'),
+            apiGet('settings').catch(() => ({}))
         ]);
         state.products = catalog.items || [];
         state.checkoutToken = token.checkout_token || '';
+        state.settings = settings || {};
         renderCatalog();
+        renderStoreContact();
     } catch (error) {
         renderRail('gialai-products', []);
         renderRail('binhdinh-products', []);

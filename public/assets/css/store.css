@@ -437,6 +437,56 @@ h1 {
     max-width: 760px;
 }
 
+.story-contact {
+    width: min(100%, 650px);
+    margin-top: clamp(18px, 3vh, 28px);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    background: rgba(5, 13, 16, 0.48);
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(12px);
+}
+
+.story-contact-copy {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+.story-contact-copy span {
+    color: #ffd18d;
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+
+.story-contact-copy strong {
+    font-size: clamp(1.05rem, 2vw, 1.35rem);
+    letter-spacing: 0.02em;
+}
+
+.story-contact-copy small {
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.story-contact-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+}
+
+.story-contact-actions a {
+    min-width: 104px;
+    text-decoration: none;
+}
+
 .region-section .region-copy p {
     display: -webkit-box;
     overflow: hidden;
@@ -1268,6 +1318,27 @@ option {
 
     .story-section {
         gap: 18px;
+    }
+
+    .story-contact {
+        margin-top: 14px;
+        padding: 12px;
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .story-contact-copy {
+        gap: 2px;
+    }
+
+    .story-contact-copy small {
+        display: none;
+    }
+
+    .story-contact-actions a {
+        flex: 1 1 0;
+        min-width: 0;
     }
 
     .origin-grid {

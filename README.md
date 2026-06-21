@@ -112,15 +112,3 @@ Health check API:
 ```powershell
 Invoke-WebRequest -UseBasicParsing http://localhost/Dacsan/api?action=db-health
 ```
-
-Chạy toàn bộ test admin trên database test riêng:
-
-```powershell
-$env:DB_DATABASE='dac_san_nha_dan_test'
-Get-ChildItem C:\xampp\htdocs\Dacsan\tests -Filter *Test.php |
-  Sort-Object Name |
-  ForEach-Object { C:\xampp\php\php.exe $_.FullName }
-Remove-Item Env:DB_DATABASE
-```
-
-Không chạy `AdminApiSmokeTest.php` với database production; test này chủ động từ chối nếu `DB_DATABASE` không phải `dac_san_nha_dan_test`.

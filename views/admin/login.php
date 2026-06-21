@@ -8,6 +8,7 @@ $scriptDir = str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ??
 $scriptDir = $scriptDir === '/' ? '' : rtrim($scriptDir, '/');
 $appBase = preg_replace('#/admin$#', '', $scriptDir) ?: '';
 $assetBase = $appBase . '/assets';
+$adminCssVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/css/admin.css') ?: time());
 
 ?>
 <!doctype html>
@@ -16,7 +17,7 @@ $assetBase = $appBase . '/assets';
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Đăng nhập quản trị - Đặc Sản Nhà Dân</title>
-    <link rel="stylesheet" href="<?= Formatter::h($assetBase) ?>/css/admin.css">
+    <link rel="stylesheet" href="<?= Formatter::h($assetBase) ?>/css/admin.css?v=<?= Formatter::h($adminCssVersion) ?>">
 </head>
 <body class="admin-login">
     <main class="login-panel">

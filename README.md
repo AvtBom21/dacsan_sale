@@ -56,6 +56,14 @@ C:\xampp\php\php.exe -S 127.0.0.1:8765 router.php
 - Purchase plan: xem trước nhu cầu, tạo PO, nhận một phần/toàn bộ, hủy và sao chép.
 - Cài đặt: thông tin cửa hàng, ngân hàng/QR và vùng giao hàng.
 
+Quy trình PO:
+
+1. Mở **Đơn hàng** và xác nhận đơn mới.
+2. Chỉ các đơn **Đã xác nhận** và chưa thuộc PO mới có checkbox chọn.
+3. Nếu đơn đã thuộc PO, cột **Tình trạng PO** hiển thị mã PO; bấm mã đó để tiếp tục xử lý, không tạo PO trùng.
+4. Với PO **Nháp**, bấm **Đã đặt hàng** để mở chức năng nhận hàng.
+5. Nhập số lượng thực nhận; hệ thống tự cập nhật PO và trạng thái các đơn liên kết.
+
 ## Database
 
 Database mặc định:

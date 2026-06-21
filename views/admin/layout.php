@@ -34,6 +34,8 @@ $appBase = preg_replace('#/admin$#', '', $scriptDir) ?: '';
 $assetBase = $appBase . '/assets';
 $storefrontUrl = $appBase === '' ? '/' : $appBase . '/';
 $apiBase = $appBase . '/admin/api/index.php';
+$adminCssVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/css/admin.css') ?: time());
+$adminJsVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/js/admin.js') ?: time());
 
 ?>
 <!doctype html>
@@ -42,7 +44,7 @@ $apiBase = $appBase . '/admin/api/index.php';
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= Formatter::h($titles[$page] ?? 'Admin') ?> - Đặc Sản Nhà Dân</title>
-    <link rel="stylesheet" href="<?= Formatter::h($assetBase) ?>/css/admin.css">
+    <link rel="stylesheet" href="<?= Formatter::h($assetBase) ?>/css/admin.css?v=<?= Formatter::h($adminCssVersion) ?>">
 </head>
 <body
     class="admin-shell"
@@ -98,6 +100,6 @@ $apiBase = $appBase . '/admin/api/index.php';
         <?php endif; ?>
     </main>
     <div class="toast-host" aria-live="polite" aria-atomic="true"></div>
-    <script src="<?= Formatter::h($assetBase) ?>/js/admin.js"></script>
+    <script src="<?= Formatter::h($assetBase) ?>/js/admin.js?v=<?= Formatter::h($adminJsVersion) ?>"></script>
 </body>
 </html>

@@ -274,8 +274,34 @@
             .map((checkbox) => checkbox.value);
         const errorNode = poBuilder.querySelector('[data-po-error]');
         const previewPanel = poBuilder.querySelector('[data-po-preview-panel]');
+        const previewButton = poBuilder.querySelector('[data-po-preview]');
+        const createButton = poBuilder.querySelector('[data-po-create]');
+        const selectedCount = poBuilder.querySelector('[data-po-selected-count]');
 
-        poBuilder.querySelector('[data-po-preview]')?.addEventListener('click', async (event) => {
+        const updatePoSelection = () => {
+            const count = selectedOrderIds().length;
+            if (selectedCount) selectedCount.textContent = `Đã chọn ${count} đơn`;
+            if (previewButton) {
+                previewButton.disabled = count === 0;
+                previewButton.textContent = `Xem trước (${count})`;
+            }
+            if (createButton) {
+                createButton.disabled = count === 0;
+                createButton.textContent = `Tạo PO (${count})`;
+            }
+            if (count === 0) {
+                previewPanel.hidden = true;
+                previewPanel.innerHTML = '';
+            }
+        };
+
+        document.querySelectorAll('[data-po-order]').forEach((checkbox) => {
+            checkbox.addEventListener('change', updatePoSelection);
+        });
+        updatePoSelection();
+
+        previewButton?.addEventListener('click', async (event) => {
+            if (selectedOrderIds().length === 0) return;
             const button = event.currentTarget;
             button.disabled = true;
             errorNode.hidden = true;
@@ -294,8 +320,9 @@
             }
         });
 
-        poBuilder.querySelector('[data-po-create]')?.addEventListener('click', async (event) => {
+        createButton?.addEventListener('click', async (event) => {
             const orderIds = selectedOrderIds();
+            if (orderIds.length === 0) return;
             if (!window.confirm(`Tạo PO từ ${orderIds.length} đơn đã chọn?`)) return;
             const button = event.currentTarget;
             button.disabled = true;

@@ -193,6 +193,7 @@ final class PurchasePlanService
             }
 
             $this->plans->updatePlanStatus($planId, 'ordered');
+            $this->plans->markLinkedOrdersOrdered($planId);
             $this->pdo->commit();
         } catch (Throwable $exception) {
             if ($this->pdo->inTransaction()) {

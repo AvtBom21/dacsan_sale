@@ -476,7 +476,19 @@ final class PurchasePlanRepository
              JOIN purchase_plan_orders ppo ON ppo.order_id = o.order_id
              SET o.STATUS = 'received'
              WHERE ppo.plan_id = :plan_id
-               AND o.STATUS = 'ordered'"
+               AND o.STATUS IN ('new', 'confirmed', 'ordered')"
+        );
+        $statement->execute(['plan_id' => $planId]);
+    }
+
+    public function markLinkedOrdersOrdered(string $planId): void
+    {
+        $statement = $this->pdo->prepare(
+            "UPDATE orders o
+             JOIN purchase_plan_orders ppo ON ppo.order_id = o.order_id
+             SET o.STATUS = 'ordered'
+             WHERE ppo.plan_id = :plan_id
+               AND o.STATUS IN ('new', 'confirmed')"
         );
         $statement->execute(['plan_id' => $planId]);
     }

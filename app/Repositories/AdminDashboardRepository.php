@@ -97,7 +97,18 @@ final class AdminDashboardRepository
                         FROM order_items oi
                         WHERE oi.order_id = o.order_id
                           AND oi.planned_plan_id IS NULL
-                    ) AS unplanned_item_count
+                    ) AS unplanned_item_count,
+                    (
+                        SELECT GROUP_CONCAT(
+                            DISTINCT CONCAT(ppo.plan_id, '|', pp.STATUS)
+                            ORDER BY ppo.plan_id
+                            SEPARATOR ','
+                        )
+                        FROM purchase_plan_orders ppo
+                        JOIN purchase_plans pp ON pp.plan_id = ppo.plan_id
+                        WHERE ppo.order_id = o.order_id
+                          AND pp.STATUS <> 'cancelled'
+                    ) AS linked_plans
              FROM orders o
              WHERE $whereSql
              ORDER BY o.created_at DESC, o.order_id DESC

@@ -1293,6 +1293,7 @@ option {
     #ch3 .region-copy p,
     #ch4 .region-copy p {
         display: -webkit-box;
+        margin-top: 8px;
         overflow: hidden;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
@@ -1303,49 +1304,139 @@ option {
     #ch4 .region-tags {
         gap: 7px;
         margin-top: 10px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    #ch3 .region-tags::-webkit-scrollbar,
+    #ch4 .region-tags::-webkit-scrollbar {
+        display: none;
     }
 
     #ch3 .region-tags span,
     #ch4 .region-tags span {
         min-height: 28px;
+        flex: 0 0 auto;
         font-size: 0.72rem;
+        white-space: nowrap;
     }
 
     .product-showcase {
         width: 100%;
-        height: clamp(410px, calc(100dvh - 305px), 505px);
+        height: clamp(390px, calc(100dvh - 268px), 505px);
         min-height: 0;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(154px, calc((100vw - 46px) / 2));
+        grid-template-rows: minmax(0, 1fr);
         margin-left: 0;
         padding-left: 0;
         padding-right: 0;
-        gap: 12px;
+        gap: 10px;
+        align-items: stretch;
     }
 
     .product-card {
-        width: auto;
+        width: 100%;
         max-width: none;
-        flex: 0 0 min(90vw, 380px);
-        gap: 8px;
-        padding: 12px;
+        height: 100%;
+        flex: none;
+        grid-template-rows: auto auto minmax(2.35em, auto) auto auto auto auto;
+        gap: 6px;
+        padding: 9px;
+        border-radius: 10px;
     }
 
     .product-card img {
-        aspect-ratio: 16 / 9;
+        aspect-ratio: 1.18;
+        max-height: 118px;
     }
 
     .product-card h3 {
-        min-height: 2.3em;
-        font-size: 0.98rem;
+        min-height: 2.35em;
+        font-size: 0.84rem;
+        line-height: 1.24;
     }
 
     .card-kicker {
-        font-size: 0.7rem;
+        min-height: 1em;
+        font-size: 0.62rem;
+        line-height: 1;
+        letter-spacing: 0.08em;
+    }
+
+    .card-kicker span:last-child {
+        display: none;
+    }
+
+    .card-price-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2px;
+        align-items: start;
+    }
+
+    .card-price {
+        font-size: 0.96rem;
+        line-height: 1.1;
+    }
+
+    .card-unit {
+        font-size: 0.68rem;
+        line-height: 1.1;
+        text-align: left;
+    }
+
+    .uom-chips {
+        gap: 5px;
+        flex-wrap: wrap;
+        overflow-x: visible;
+    }
+
+    .uom-chip {
+        flex: 1 1 100%;
+        min-height: 26px;
+        padding: 0 7px;
+        border-radius: 6px;
+        font-size: 0.68rem;
+        line-height: 1.12;
+        white-space: normal;
+    }
+
+    .card-controls {
+        min-width: 0;
+    }
+
+    .card-controls .quantity-control {
+        width: 100%;
+        min-width: 0;
+        min-height: 30px;
+    }
+
+    .card-controls .quantity-control button {
+        width: 30px;
+        height: 28px;
+        flex: 0 0 auto;
     }
 
     .card-actions .btn-primary,
     .card-actions .btn-secondary {
-        min-height: 38px;
-        font-size: 0.9rem;
+        min-height: 32px;
+        padding-inline: 6px;
+        white-space: normal;
+        font-size: 0.72rem;
+        line-height: 1.12;
+    }
+
+    .card-actions {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .card-actions .btn-secondary::before {
+        width: 13px;
+        height: 13px;
     }
 
     .rail-controls {
@@ -1417,14 +1508,37 @@ option {
     }
 
     .product-showcase {
-        height: clamp(386px, calc(100dvh - 315px), 430px);
+        height: clamp(370px, calc(100dvh - 285px), 430px);
+        grid-auto-columns: minmax(146px, calc((100vw - 42px) / 2));
+        gap: 8px;
     }
 
     .product-card {
-        flex-basis: min(88vw, 350px);
+        gap: 5px;
+        padding: 8px;
     }
 
     .product-card img {
-        aspect-ratio: 16 / 9;
+        aspect-ratio: 1.25;
+        max-height: 98px;
+    }
+
+    .card-kicker {
+        display: none;
+    }
+
+    .product-card h3 {
+        min-height: 2.25em;
+        font-size: 0.8rem;
+    }
+
+    .card-price {
+        font-size: 0.9rem;
+    }
+
+    .card-actions .btn-primary,
+    .card-actions .btn-secondary {
+        min-height: 30px;
+        font-size: 0.68rem;
     }
 }

@@ -530,7 +530,10 @@ function moveProductRail(railId, direction) {
     const rail = document.getElementById(railId);
     if (!rail) return;
     const card = rail.querySelector('.product-card');
-    const step = card ? card.getBoundingClientRect().width + 24 : rail.clientWidth * 0.8;
+    const styles = window.getComputedStyle(rail);
+    const gap = parseFloat(styles.columnGap || styles.gap) || 24;
+    const visibleCards = window.matchMedia('(max-width: 760px)').matches ? 2 : 1;
+    const step = card ? (card.getBoundingClientRect().width + gap) * visibleCards : rail.clientWidth * 0.8;
     rail.scrollBy({ left: step * direction, behavior: 'smooth' });
 }
 

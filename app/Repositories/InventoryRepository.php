@@ -153,6 +153,119 @@ final class InventoryRepository
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function findLotForUpdate(string $lotId): ?array
+    {
+        $lock = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite'
+            ? ''
+            : ' FOR UPDATE';
+        $statement = $this->pdo->prepare(
+            'SELECT *
+             FROM inventory_lots
+             WHERE lot_id = :lot_id
+             LIMIT 1' . $lock
+        );
+        $statement->execute(['lot_id' => $lotId]);
+        $row = $statement->fetch();
+
+        return $row === false ? null : $row;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function purchasableUom(string $productId, string $uomId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT p.product_id, p.product_name, p.default_source,
+                    u.uom_id, u.uom_label, u.conversion_to_base,
+                    u.cost_price_vnd, u.is_active, u.is_purchasable
+             FROM products p
+             JOIN product_uoms u ON u.product_id = p.product_id
+             WHERE p.product_id = :product_id
+               AND u.uom_id = :uom_id
+               AND p.is_active = 1
+               AND u.is_active = 1
+               AND u.is_purchasable = 1
+             LIMIT 1'
+        );
+        $statement->execute([
+            'product_id' => $productId,
+            'uom_id' => $uomId,
+        ]);
+        $row = $statement->fetch();
+
+        return $row === false ? null : $row;
+    }
+
+    public function adjustLotOnHand(string $lotId, float $deltaBase): void
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE inventory_lots
+             SET qty_base_on_hand = qty_base_on_hand + :delta
+             WHERE lot_id = :lot_id
+               AND qty_base_on_hand + :delta_check >= qty_base_reserved
+               AND qty_base_on_hand + :delta_zero >= 0'
+        );
+        $statement->execute([
+            'delta' => $deltaBase,
+            'delta_check' => $deltaBase,
+            'delta_zero' => $deltaBase,
+            'lot_id' => $lotId,
+        ]);
+
+        if ($statement->rowCount() !== 1) {
+            throw new \RuntimeException('Không thể điều chỉnh lot xuống dưới số lượng đã giữ hoặc dưới 0.');
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function movementsForLot(string $lotId, int $limit = 200): array
+    {
+        $limit = max(1, min($limit, 200));
+        $statement = $this->pdo->prepare(
+            "SELECT movement_id, created_at, movement_type, ref_type, ref_id,
+                    lot_id, product_id, source_location, uom_id, qty_uom,
+                    conversion_to_base_snapshot, qty_base,
+                    cost_per_base_unit_vnd, note
+             FROM inventory_movements
+             WHERE lot_id = :lot_id
+             ORDER BY created_at DESC, movement_id DESC
+             LIMIT $limit"
+        );
+        $statement->execute(['lot_id' => $lotId]);
+
+        return $statement->fetchAll();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function lotDetail(string $lotId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT l.*, p.product_name, p.base_uom_label,
+                    u.uom_label AS received_uom_label
+             FROM inventory_lots l
+             JOIN products p ON p.product_id = l.product_id
+             LEFT JOIN product_uoms u ON u.uom_id = l.received_uom_id
+             WHERE l.lot_id = :lot_id
+             LIMIT 1'
+        );
+        $statement->execute(['lot_id' => $lotId]);
+        $lot = $statement->fetch();
+        if ($lot === false) {
+            return null;
+        }
+        $lot['movements'] = $this->movementsForLot($lotId);
+
+        return $lot;
+    }
+
+    /**
      * @param array<string, mixed> $data
      */
     public function createLot(array $data): string

@@ -9,8 +9,10 @@ use DacSanNhaDan\Core\Response;
 use DacSanNhaDan\Repositories\AdminDashboardRepository;
 use DacSanNhaDan\Repositories\AdminProductRepository;
 use DacSanNhaDan\Repositories\AdminUserRepository;
+use DacSanNhaDan\Repositories\InventoryRepository;
 use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
+use DacSanNhaDan\Services\AdminInventoryService;
 use DacSanNhaDan\Services\AdminProductService;
 use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Support\Logger;
@@ -109,6 +111,7 @@ function admin_navigation_capabilities(
         'orders_print' => $authorization->allows($role, 'orders.print'),
         'products_manage' => $authorization->allows($role, 'products.manage'),
         'settings_manage' => $authorization->allows($role, 'settings.manage'),
+        'inventory_manage' => $authorization->allows($role, 'inventory.manage'),
     ];
 }
 
@@ -124,6 +127,7 @@ try {
     $auth = new AdminAuthService(new AdminUserRepository($pdo), $authorization);
     $admin = new AdminService(new AdminDashboardRepository($pdo));
     $adminProducts = new AdminProductService($pdo, new AdminProductRepository($pdo));
+    $adminInventory = new AdminInventoryService($pdo, new InventoryRepository($pdo));
     $error = null;
     $user = null;
 
@@ -157,7 +161,7 @@ try {
     $role = (string) $user['role'];
     admin_require_page_permission($authorization, $role, $page);
     $pageId = admin_page_id_from_value($page, $_GET['id'] ?? null);
-    $data = admin_page_data($admin, $page, $pageId, $adminProducts);
+    $data = admin_page_data($admin, $page, $pageId, $adminProducts, $adminInventory);
     $capabilities = admin_navigation_capabilities($authorization, $role);
     $csrfToken = Csrf::adminToken();
 
@@ -193,7 +197,8 @@ function admin_page_data(
     AdminService $admin,
     string $page,
     ?string $pageId = null,
-    ?AdminProductService $adminProducts = null
+    ?AdminProductService $adminProducts = null,
+    ?AdminInventoryService $adminInventory = null
 ): array
 {
     return match ($page) {
@@ -205,7 +210,7 @@ function admin_page_data(
         'order-detail' => admin_order_detail_data($admin, $pageId),
         'product-detail' => admin_product_detail_data($adminProducts, $pageId),
         'product-form' => admin_product_form_data($adminProducts, $pageId),
-        'inventory-lot',
+        'inventory-lot' => admin_inventory_lot_data($adminInventory, $pageId),
         'purchase-plan-detail',
         'admin-users' => [
             'id' => $pageId,
@@ -214,6 +219,16 @@ function admin_page_data(
         ],
         default => $admin->dashboard(),
     };
+}
+
+/** @return array<string, mixed> */
+function admin_inventory_lot_data(?AdminInventoryService $service, ?string $lotId): array
+{
+    if ($service === null) {
+        throw new AppException('Dịch vụ kho chưa sẵn sàng.', 500);
+    }
+
+    return $service->detail((string) $lotId);
 }
 
 /** @return array<string, mixed> */

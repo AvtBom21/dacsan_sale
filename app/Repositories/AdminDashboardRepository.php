@@ -266,10 +266,23 @@ final class AdminDashboardRepository
              LIMIT ' . $limit
         )->fetchAll();
 
+        $purchasableUoms = $this->pdo->query(
+            'SELECT p.product_id, p.product_name, p.default_source,
+                    u.uom_id, u.uom_label, u.conversion_to_base,
+                    u.cost_price_vnd
+             FROM products p
+             JOIN product_uoms u ON u.product_id = p.product_id
+             WHERE p.is_active = 1
+               AND u.is_active = 1
+               AND u.is_purchasable = 1
+             ORDER BY p.product_name, u.sort_order, u.uom_label'
+        )->fetchAll();
+
         return [
             'summary' => $summary,
             'lots' => $lots,
             'movements' => $movements,
+            'purchasable_uoms' => $purchasableUoms,
         ];
     }
 

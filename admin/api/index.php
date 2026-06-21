@@ -19,6 +19,7 @@ use DacSanNhaDan\Repositories\SettingRepository;
 use DacSanNhaDan\Repositories\ShippingRepository;
 use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
+use DacSanNhaDan\Services\AdminInventoryService;
 use DacSanNhaDan\Services\AdminProductService;
 use DacSanNhaDan\Services\AdminService;
 use DacSanNhaDan\Services\CartQuoteService;
@@ -41,6 +42,8 @@ try {
     $admin = new AdminService(new AdminDashboardRepository($pdo));
     $adminProductRepository = new AdminProductRepository($pdo);
     $adminProducts = new AdminProductService($pdo, $adminProductRepository);
+    $inventoryRepository = new InventoryRepository($pdo);
+    $adminInventory = new AdminInventoryService($pdo, $inventoryRepository);
     $uploads = new UploadService(dirname(__DIR__, 2));
 
     if ($action === '' || $action === 'health') {
@@ -245,6 +248,32 @@ try {
         return;
     }
 
+    if ($action === 'inventory-lot-detail') {
+        admin_api_require_method('GET');
+        Response::ok($adminInventory->detail(admin_api_required_id('lot_id')));
+        return;
+    }
+
+    if ($action === 'inventory-receive') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminInventory->receiveManual($body));
+        return;
+    }
+
+    if ($action === 'inventory-adjust') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminInventory->adjustLot(
+            admin_api_body_id($body, 'lot_id'),
+            $body['delta_base'] ?? null,
+            $body['reason'] ?? null
+        ));
+        return;
+    }
+
     if ($action === 'po-list') {
         admin_api_require_method('GET');
         Response::ok($admin->purchasePlans(admin_api_query_filters()));
@@ -266,7 +295,6 @@ try {
         return;
     }
 
-    $inventoryRepository = new InventoryRepository($pdo);
     $orderRepository = new OrderRepository($pdo);
     $purchasePlanRepository = new PurchasePlanRepository($pdo);
     $inventoryService = new InventoryService($inventoryRepository);
@@ -381,6 +409,9 @@ function admin_api_action_permission(string $action): ?string
         'product-active' => 'products.manage',
         'product-image-upload' => 'products.manage',
         'inventory' => 'inventory.view',
+        'inventory-lot-detail' => 'inventory.view',
+        'inventory-receive' => 'inventory.manage',
+        'inventory-adjust' => 'inventory.manage',
         'po-list' => 'purchase_plans.view',
         'po-detail' => 'purchase_plans.view',
         'po-copy-text' => 'purchase_plans.view',

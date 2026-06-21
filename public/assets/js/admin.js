@@ -198,6 +198,73 @@
         });
     }
 
+    const inventoryReceiveForm = document.querySelector('[data-inventory-receive]');
+    if (inventoryReceiveForm) {
+        inventoryReceiveForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const errorNode = inventoryReceiveForm.querySelector('[data-inventory-error]');
+            const submit = inventoryReceiveForm.querySelector('button[type="submit"]');
+            const selected = inventoryReceiveForm.elements.uom_key.value.split('|');
+            const payload = {
+                product_id: selected[0] || '',
+                uom_id: selected[1] || '',
+                qty_uom: inventoryReceiveForm.elements.qty_uom.value,
+                source_location: inventoryReceiveForm.elements.source_location.value,
+                received_date: inventoryReceiveForm.elements.received_date.value,
+                expiry_date: inventoryReceiveForm.elements.expiry_date.value,
+                supplier_name: inventoryReceiveForm.elements.supplier_name.value,
+                cost_per_uom_vnd: inventoryReceiveForm.elements.cost_per_uom_vnd.value,
+                note: inventoryReceiveForm.elements.note.value,
+            };
+            submit.disabled = true;
+            errorNode.hidden = true;
+            try {
+                const lot = await adminRequest('inventory-receive', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                });
+                window.location.href = `./?page=inventory-lot&id=${encodeURIComponent(lot.lot_id)}`;
+            } catch (error) {
+                errorNode.textContent = error.message || 'Không thể nhập kho.';
+                errorNode.hidden = false;
+                submit.disabled = false;
+            }
+        });
+
+        inventoryReceiveForm.elements.uom_key.addEventListener('change', () => {
+            const option = inventoryReceiveForm.elements.uom_key.selectedOptions[0];
+            if (!option) return;
+            inventoryReceiveForm.elements.source_location.value = option.dataset.source || 'Unknown';
+            inventoryReceiveForm.elements.cost_per_uom_vnd.value = option.dataset.cost || '0';
+        });
+    }
+
+    const inventoryAdjustForm = document.querySelector('[data-inventory-adjust]');
+    if (inventoryAdjustForm) {
+        inventoryAdjustForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const errorNode = inventoryAdjustForm.querySelector('[data-inventory-error]');
+            const submit = inventoryAdjustForm.querySelector('button[type="submit"]');
+            submit.disabled = true;
+            errorNode.hidden = true;
+            try {
+                await adminRequest('inventory-adjust', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        lot_id: inventoryAdjustForm.dataset.lotId || '',
+                        delta_base: inventoryAdjustForm.elements.delta_base.value,
+                        reason: inventoryAdjustForm.elements.reason.value,
+                    }),
+                });
+                window.location.reload();
+            } catch (error) {
+                errorNode.textContent = error.message || 'Không thể điều chỉnh tồn kho.';
+                errorNode.hidden = false;
+                submit.disabled = false;
+            }
+        });
+    }
+
     function fieldValue(root, selector) {
         return root.querySelector(selector)?.value?.trim() || '';
     }

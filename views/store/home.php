@@ -59,15 +59,20 @@ $storeJsVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/js/s
             </div>
             <div class="section-overlay"></div>
             <div class="hero-content">
-                <p class="section-label">Đặc Sản Nhà Dân</p>
-                <h1>Đặc sản nhà làm từ cao nguyên Gia Lai đến duyên hải Bình Định</h1>
-                <p class="hero-subtitle">Tuyển chọn những món đặc sản quen vị, làm theo mẻ nhỏ, đóng gói sạch và giao tận nơi.</p>
-                <div class="hero-actions">
-                    <button class="btn-primary" type="button" onclick="scrollToSection('ch3')">Khám phá Gia Lai</button>
-                    <button class="btn-secondary" type="button" onclick="scrollToSection('ch4')">Khám phá Bình Định</button>
+                <div class="hero-intro">
+                    <p class="section-label">Đặc Sản Nhà Dân</p>
+                    <h1>Đặc sản nhà làm từ cao nguyên Gia Lai đến duyên hải Bình Định</h1>
+                    <p class="hero-subtitle">Tuyển chọn những món đặc sản quen vị, làm theo mẻ nhỏ, đóng gói sạch và giao tận nơi.</p>
+                    <div class="hero-actions">
+                        <button class="btn-primary" type="button" onclick="scrollToSection('ch3')">Khám phá Gia Lai</button>
+                        <button class="btn-secondary" type="button" onclick="scrollToSection('ch4')">Khám phá Bình Định</button>
+                    </div>
                 </div>
                 <div class="best-seller-block" data-best-sellers>
-                    <span class="best-seller-label">Sản phẩm bán chạy</span>
+                    <div class="best-seller-heading">
+                        <span class="best-seller-label">Sản phẩm bán chạy</span>
+                        <strong>Món được khách chọn nhiều</strong>
+                    </div>
                     <div class="best-seller-list" data-best-seller-list></div>
                 </div>
             </div>

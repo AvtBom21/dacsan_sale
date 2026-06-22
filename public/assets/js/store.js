@@ -150,10 +150,15 @@ function renderBestSellers() {
     if (!list) return;
     const products = state.bestSellers.length ? state.bestSellers : state.products.slice(0, 3);
     list.innerHTML = products.map((product, index) => `
-        <button type="button" onclick="openModal('${escapeHtml(product.product_id)}')">
-            <span>${String(index + 1).padStart(2, '0')}</span>
-            <strong>${escapeHtml(product.product_name)}</strong>
-            <small>${escapeHtml(product.price_display || product.default_uom?.unit_price_display || '')}</small>
+        <button class="best-seller-card" type="button" onclick="openModal('${escapeHtml(product.product_id)}')">
+            <img src="${escapeHtml(normalizeImage(product.base_image))}" alt="${escapeHtml(product.base_image?.alt || product.product_name)}">
+            <span class="best-seller-rank">0${index + 1}</span>
+            <span class="best-seller-copy">
+                <small>${escapeHtml(product.category_label || regionLabel(product))}</small>
+                <strong>${escapeHtml(product.product_name)}</strong>
+                <span>${escapeHtml(product.short_description || '')}</span>
+                <b>${escapeHtml(product.price_display || product.default_uom?.unit_price_display || '')}</b>
+            </span>
         </button>
     `).join('');
 }

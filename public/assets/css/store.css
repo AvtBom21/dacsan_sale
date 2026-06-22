@@ -304,8 +304,22 @@ section {
 }
 
 .hero-content {
-    width: min(960px, 100%);
-    max-width: var(--section-content-max);
+    width: 100%;
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(0, 0.82fr) minmax(320px, 0.9fr);
+    gap: clamp(24px, 5vw, 72px);
+    align-items: center;
+}
+
+.hero-intro {
+    min-width: 0;
+}
+
+.hero-intro h1 {
+    max-width: 100%;
+    font-size: clamp(3rem, 4vw, 4.05rem);
+    line-height: 1.08;
 }
 
 .section-label {
@@ -488,8 +502,8 @@ h1 {
 }
 
 .best-seller-block {
-    width: min(760px, 100%);
-    margin-top: 18px;
+    width: 100%;
+    min-width: 0;
 }
 
 .best-seller-label,
@@ -503,47 +517,135 @@ h1 {
     text-transform: uppercase;
 }
 
+.best-seller-heading {
+    margin-bottom: 14px;
+}
+
+.best-seller-heading .best-seller-label {
+    margin-bottom: 4px;
+}
+
+.best-seller-heading > strong {
+    display: block;
+    font-size: clamp(1.35rem, 2vw, 1.8rem);
+    line-height: 1.15;
+}
+
 .best-seller-list {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
 }
 
-.best-seller-list button {
+.best-seller-card {
+    position: relative;
+    min-height: 158px;
     min-width: 0;
-    padding: 11px 12px;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 2px 9px;
+    padding: 0;
+    display: block;
+    overflow: hidden;
     border: 1px solid rgba(255, 255, 255, .2);
-    border-radius: 8px;
-    background: rgba(5, 13, 16, .48);
+    border-radius: 12px;
+    background: rgba(5, 13, 16, .72);
     color: #fff;
     text-align: left;
-    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, .24);
+    transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
 }
 
-.best-seller-list button > span {
-    grid-row: 1 / 3;
-    color: var(--sun);
-    font-size: .78rem;
+.best-seller-card:first-child {
+    grid-column: 1 / -1;
+    min-height: 210px;
+}
+
+.best-seller-card:hover,
+.best-seller-card:focus-visible {
+    transform: translateY(-4px);
+    border-color: rgba(255, 145, 62, .75);
+    box-shadow: 0 24px 44px rgba(0, 0, 0, .34);
+}
+
+.best-seller-card img {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+    object-fit: cover;
+    transition: transform .35s ease;
+}
+
+.best-seller-card:hover img {
+    transform: scale(1.035);
+}
+
+.best-seller-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(4, 9, 11, .9), rgba(4, 9, 11, .32) 72%),
+        linear-gradient(0deg, rgba(4, 9, 11, .82), transparent 70%);
+}
+
+.best-seller-rank {
+    position: absolute;
+    z-index: 2;
+    top: 12px;
+    right: 12px;
+    min-width: 34px;
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .24);
+    border-radius: 999px;
+    background: rgba(7, 12, 14, .66);
+    color: #ffd18d;
+    font-size: .72rem;
     font-weight: 900;
+    backdrop-filter: blur(8px);
 }
 
-.best-seller-list strong,
-.best-seller-list small {
+.best-seller-copy {
+    position: absolute;
+    z-index: 2;
+    inset: auto 14px 14px;
+    display: grid;
+    gap: 3px;
+}
+
+.best-seller-copy small {
+    color: #ffd18d;
+    font-size: .68rem;
+    font-weight: 850;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.best-seller-copy strong {
+    font-size: 1.05rem;
+    line-height: 1.16;
+}
+
+.best-seller-card:first-child .best-seller-copy strong {
+    font-size: 1.35rem;
+}
+
+.best-seller-copy > span {
+    display: -webkit-box;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.best-seller-list strong {
-    font-size: .88rem;
-}
-
-.best-seller-list small {
-    color: var(--muted);
+    color: rgba(255, 255, 255, .76);
     font-size: .76rem;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+}
+
+.best-seller-copy b {
+    margin-top: 4px;
+    color: #fff;
+    font-size: .93rem;
 }
 
 .review-showcase {
@@ -1477,6 +1579,19 @@ option {
         font-size: 3.45rem;
     }
 
+    .hero-content {
+        grid-template-columns: minmax(0, 1fr) minmax(390px, .8fr);
+        gap: 28px;
+    }
+
+    .best-seller-card:first-child {
+        min-height: 200px;
+    }
+
+    .best-seller-card {
+        min-height: 155px;
+    }
+
     .story-section,
     #checkout-form,
     .product-modal-body {
@@ -1568,6 +1683,16 @@ option {
         line-height: 1.12;
     }
 
+    .hero-intro h1 {
+        font-size: clamp(1.25rem, 5.7vw, 1.5rem);
+        line-height: 1.12;
+    }
+
+    .hero-intro .section-label {
+        margin-bottom: 10px;
+        font-size: .72rem;
+    }
+
     .story-copy h2,
     .region-copy h2 {
         font-size: clamp(1.65rem, 8vw, 2.08rem);
@@ -1576,14 +1701,26 @@ option {
     .hero-subtitle,
     .region-copy p,
     .story-copy p {
-        font-size: 0.96rem;
-        line-height: 1.58;
+        font-size: 0.88rem;
+        line-height: 1.5;
+    }
+
+    .hero-subtitle {
+        margin-top: 12px;
+    }
+
+    .hero-actions {
+        margin-top: 20px;
     }
 
     .hero-actions .btn-primary,
     .hero-actions .btn-secondary {
         flex: 1 1 100%;
         width: 100%;
+    }
+
+    .hero-content {
+        display: block;
     }
 
     .story-section {
@@ -1615,13 +1752,52 @@ option {
         margin-top: 12px;
     }
 
+    .best-seller-heading {
+        margin-bottom: 7px;
+    }
+
+    .best-seller-heading > strong {
+        display: none;
+    }
+
     .best-seller-list {
         grid-template-columns: none;
         grid-auto-flow: column;
-        grid-auto-columns: minmax(150px, 1fr);
+        grid-auto-columns: minmax(158px, 44vw);
         overflow-x: auto;
         padding-bottom: 4px;
         scrollbar-width: none;
+    }
+
+    .best-seller-card,
+    .best-seller-card:first-child {
+        grid-column: auto;
+        min-height: 116px;
+    }
+
+    .best-seller-copy {
+        inset: auto 10px 9px;
+    }
+
+    .best-seller-copy > span {
+        display: none;
+    }
+
+    .best-seller-copy strong,
+    .best-seller-card:first-child .best-seller-copy strong {
+        font-size: .83rem;
+    }
+
+    .best-seller-copy b {
+        margin-top: 1px;
+        font-size: .76rem;
+    }
+
+    .best-seller-rank {
+        top: 8px;
+        right: 8px;
+        min-width: 28px;
+        min-height: 25px;
     }
 
     .best-seller-list::-webkit-scrollbar {

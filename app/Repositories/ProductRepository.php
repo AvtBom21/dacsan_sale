@@ -173,6 +173,23 @@ final class ProductRepository
         return $this->activeImagesByProductIds([$productId])[$productId] ?? [];
     }
 
+    /** @return array<int, array{product_id: string, sold_qty: float}> */
+    public function bestSellers(int $limit = 3): array
+    {
+        $limit = max(1, min($limit, 12));
+        return $this->pdo->query(
+            "SELECT oi.product_id, SUM(oi.qty_base) AS sold_qty
+             FROM order_items oi
+             JOIN orders o ON o.order_id = oi.order_id
+             JOIN products p ON p.product_id = oi.product_id
+             WHERE o.STATUS <> 'cancelled'
+               AND p.is_active = 1
+             GROUP BY oi.product_id
+             ORDER BY sold_qty DESC, oi.product_id
+             LIMIT $limit"
+        )->fetchAll();
+    }
+
     /**
      * @param array<int, array<string, mixed>> $rows
      * @return array<string, array<int, array<string, mixed>>>

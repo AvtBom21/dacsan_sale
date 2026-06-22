@@ -40,6 +40,7 @@ $storeJsVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/js/s
             <button type="button" onclick="scrollToSection('ch4')">Bình Định</button>
             <button type="button" onclick="scrollToSection('products')">Sản phẩm</button>
             <button type="button" onclick="toggleCart(true)">Giỏ hàng</button>
+            <button type="button" data-customer-auth-open onclick="openCustomerArea()">Đăng nhập</button>
         </nav>
         <button class="header-btn cart-btn" type="button" onclick="toggleCart()" aria-label="Mở giỏ hàng">
             <span class="bag-icon" aria-hidden="true"></span>
@@ -65,11 +66,9 @@ $storeJsVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/js/s
                     <button class="btn-primary" type="button" onclick="scrollToSection('ch3')">Khám phá Gia Lai</button>
                     <button class="btn-secondary" type="button" onclick="scrollToSection('ch4')">Khám phá Bình Định</button>
                 </div>
-                <div class="trust-pills" aria-label="Cam kết chất lượng">
-                    <span>Làm theo mẻ nhỏ</span>
-                    <span>Nguồn gốc vùng miền</span>
-                    <span>Đóng gói sạch</span>
-                    <span>Giao tận nơi</span>
+                <div class="best-seller-block" data-best-sellers>
+                    <span class="best-seller-label">Sản phẩm bán chạy</span>
+                    <div class="best-seller-list" data-best-seller-list></div>
                 </div>
             </div>
         </section>
@@ -97,15 +96,14 @@ $storeJsVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/js/s
                     </div>
                 </div>
             </div>
-            <div class="origin-grid" aria-label="Hai vùng đặc sản">
-                <article style="--card-bg: url('<?= htmlspecialchars($sectionMediaBase, ENT_QUOTES, 'UTF-8') ?>/highland-origin.jpeg')">
-                    <span>Gia Lai</span>
-                    <strong>Nắng gió cao nguyên, vị đậm mộc mạc.</strong>
-                </article>
-                <article style="--card-bg: url('<?= htmlspecialchars($sectionMediaBase, ENT_QUOTES, 'UTF-8') ?>/binh-dinh-boats.jpeg')">
-                    <span>Bình Định</span>
-                    <strong>Làng chài duyên hải, món quen dễ chia sẻ.</strong>
-                </article>
+            <div class="review-showcase" data-review-showcase>
+                <div class="review-heading">
+                    <span>Khách hàng chia sẻ</span>
+                    <strong>Đánh giá nổi bật</strong>
+                </div>
+                <div class="review-list" data-review-list>
+                    <p class="review-empty">Chưa có đánh giá được duyệt.</p>
+                </div>
             </div>
         </section>
 
@@ -232,6 +230,60 @@ $storeJsVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/js/s
                 <p id="checkout-success-text"></p>
                 <button class="btn-primary" type="button" onclick="closeCheckout()">Tiếp tục mua hàng</button>
             </div>
+        </div>
+    </div>
+
+    <div class="modal" id="customer-auth-modal" aria-hidden="true">
+        <div class="modal-panel customer-panel" role="dialog" aria-modal="true" aria-labelledby="customer-auth-title">
+            <button class="icon-btn close-modal" type="button" onclick="closeCustomerAuth()" aria-label="Đóng đăng nhập">×</button>
+            <p class="section-label">Tài khoản khách hàng</p>
+            <h2 id="customer-auth-title">Đăng nhập</h2>
+            <div class="customer-tabs">
+                <button type="button" class="active" data-auth-tab="login" onclick="switchAuthMode('login')">Đăng nhập</button>
+                <button type="button" data-auth-tab="register" onclick="switchAuthMode('register')">Đăng ký</button>
+            </div>
+            <form data-customer-login onsubmit="submitCustomerLogin(event)">
+                <label>Số điện thoại<input name="customer_phone" required autocomplete="tel"></label>
+                <label>Mật khẩu<input name="password" type="password" minlength="8" required autocomplete="current-password"></label>
+                <div class="inline-message" data-auth-message hidden></div>
+                <button class="btn-primary" type="submit">Đăng nhập</button>
+            </form>
+            <form data-customer-register onsubmit="submitCustomerRegister(event)" hidden>
+                <label>Họ và tên<input name="customer_name" required autocomplete="name"></label>
+                <label>Số điện thoại<input name="customer_phone" required autocomplete="tel"></label>
+                <label>Địa chỉ mặc định<textarea name="customer_address" autocomplete="street-address"></textarea></label>
+                <label>Mật khẩu<input name="password" type="password" minlength="8" maxlength="72" required autocomplete="new-password"></label>
+                <div class="inline-message" data-auth-message hidden></div>
+                <button class="btn-primary" type="submit">Tạo tài khoản</button>
+            </form>
+            <p class="customer-otp-note">Xác thực OTP sẽ được bổ sung sau khi kết nối nhà cung cấp SMS/Zalo.</p>
+        </div>
+    </div>
+
+    <div class="modal" id="customer-account-modal" aria-hidden="true">
+        <div class="modal-panel account-panel" role="dialog" aria-modal="true" aria-labelledby="customer-account-title">
+            <button class="icon-btn close-modal" type="button" onclick="closeCustomerAccount()" aria-label="Đóng tài khoản">×</button>
+            <div class="account-heading">
+                <div>
+                    <p class="section-label">Tài khoản khách hàng</p>
+                    <h2 id="customer-account-title">Thông tin của bạn</h2>
+                </div>
+                <button class="btn-secondary" type="button" onclick="logoutCustomer()">Đăng xuất</button>
+            </div>
+            <form class="account-profile" data-customer-profile onsubmit="submitCustomerProfile(event)">
+                <label>Họ và tên<input name="customer_name" required autocomplete="name"></label>
+                <label>Số điện thoại<input name="customer_phone" readonly></label>
+                <label class="full">Địa chỉ mặc định<textarea name="customer_address" autocomplete="street-address"></textarea></label>
+                <div class="inline-message full" data-profile-message hidden></div>
+                <button class="btn-primary" type="submit">Lưu thông tin</button>
+            </form>
+            <section class="account-orders">
+                <div class="account-orders-heading">
+                    <h3>Đơn hàng của tôi</h3>
+                    <button class="btn-secondary" type="button" onclick="loadCustomerOrders()">Tải lại</button>
+                </div>
+                <div data-customer-orders></div>
+            </section>
         </div>
     </div>
 

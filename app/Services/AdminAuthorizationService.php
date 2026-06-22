@@ -24,6 +24,8 @@ final class AdminAuthorizationService
             'inventory.manage',
             'purchase_plans.view',
             'purchase_plans.manage',
+            'reviews.view',
+            'reviews.manage',
             'settings.view',
             'settings.manage',
         ],
@@ -34,6 +36,7 @@ final class AdminAuthorizationService
             'orders.print',
             'purchase_plans.view',
             'purchase_plans.manage',
+            'reviews.view',
         ],
     ];
 

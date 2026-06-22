@@ -54,11 +54,16 @@ final class CheckoutService
         $this->pdo->beginTransaction();
 
         try {
-            $customerId = $this->customers->upsertCustomer([
-                'customer_name' => $customerName,
-                'customer_phone' => $customerPhone,
-                'customer_address' => $customerAddress,
-            ]);
+            $authenticatedCustomerId = (int) ($payload['_authenticated_customer_id'] ?? 0);
+            if ($authenticatedCustomerId > 0 && $this->customers->findById($authenticatedCustomerId) !== null) {
+                $customerId = $authenticatedCustomerId;
+            } else {
+                $customerId = $this->customers->upsertCustomer([
+                    'customer_name' => $customerName,
+                    'customer_phone' => $customerPhone,
+                    'customer_address' => $customerAddress,
+                ]);
+            }
 
             $orderId = $this->uniqueOrderId();
             $this->orders->createOrder([

@@ -18,6 +18,7 @@ final class DatabaseBaseline
         'customers',
         'orders',
         'order_items',
+        'product_reviews',
         'inventory_lots',
         'inventory_movements',
         'order_item_allocations',

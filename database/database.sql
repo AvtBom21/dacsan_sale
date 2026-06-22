@@ -25,6 +25,7 @@ USE dac_san_nha_dan;
 SET FOREIGN_KEY_CHECKS = 0;
 DROP VIEW IF EXISTS v_product_cards;
 DROP VIEW IF EXISTS v_inventory_summary;
+DROP TABLE IF EXISTS product_reviews;
 DROP TABLE IF EXISTS purchase_plan_receipt_items;
 DROP TABLE IF EXISTS purchase_plan_receipts;
 DROP TABLE IF EXISTS purchase_plan_orders;
@@ -151,6 +152,9 @@ CREATE TABLE customers (
   customer_name    VARCHAR(160) NOT NULL,
   customer_phone   VARCHAR(30) NOT NULL,
   customer_address VARCHAR(255),
+  password_hash    VARCHAR(255) NULL,
+  is_active        TINYINT(1) NOT NULL DEFAULT 1,
+  last_login_at    DATETIME NULL,
   note             TEXT,
   created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -211,6 +215,30 @@ CREATE TABLE order_items (
   INDEX idx_order_items_product (product_id),
   INDEX idx_order_items_lot (allocated_lot_id),
   INDEX idx_order_items_plan (planned_plan_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE product_reviews (
+  review_id       BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  customer_id     BIGINT UNSIGNED NOT NULL,
+  order_id        VARCHAR(40) NOT NULL,
+  product_id      VARCHAR(40) NOT NULL,
+  rating          TINYINT UNSIGNED NOT NULL,
+  review_text     VARCHAR(1000) NOT NULL,
+  status          ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  moderated_by    BIGINT UNSIGNED NULL,
+  moderated_at    DATETIME NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_reviews_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_reviews_order FOREIGN KEY (order_id) REFERENCES orders(order_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_reviews_product FOREIGN KEY (product_id) REFERENCES products(product_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  UNIQUE KEY uq_review_order_product_customer (order_id, product_id, customer_id),
+  INDEX idx_reviews_public (status, rating, created_at),
+  INDEX idx_reviews_customer (customer_id, created_at),
+  CONSTRAINT chk_reviews_rating CHECK (rating BETWEEN 1 AND 5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

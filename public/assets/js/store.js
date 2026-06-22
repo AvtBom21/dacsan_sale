@@ -3,6 +3,10 @@ const productBase = document.body.dataset.productBase || '';
 const state = {
     products: [],
     settings: {},
+    customer: null,
+    bestSellers: [],
+    reviews: [],
+    customerOrders: [],
     cart: [],
     card: {},
     currentProduct: null,
@@ -127,6 +131,48 @@ function toast(message, type = 'info') {
     item.textContent = message;
     stack.appendChild(item);
     setTimeout(() => item.remove(), 3600);
+}
+
+function setInlineMessage(node, message, type = '') {
+    if (!node) return;
+    node.textContent = message;
+    node.className = `inline-message ${type}`.trim();
+    node.hidden = message === '';
+}
+
+function updateCustomerNavigation() {
+    const button = document.querySelector('[data-customer-auth-open]');
+    if (button) button.textContent = state.customer ? 'Tài khoản' : 'Đăng nhập';
+}
+
+function renderBestSellers() {
+    const list = document.querySelector('[data-best-seller-list]');
+    if (!list) return;
+    const products = state.bestSellers.length ? state.bestSellers : state.products.slice(0, 3);
+    list.innerHTML = products.map((product, index) => `
+        <button type="button" onclick="openModal('${escapeHtml(product.product_id)}')">
+            <span>${String(index + 1).padStart(2, '0')}</span>
+            <strong>${escapeHtml(product.product_name)}</strong>
+            <small>${escapeHtml(product.price_display || product.default_uom?.unit_price_display || '')}</small>
+        </button>
+    `).join('');
+}
+
+function renderPublicReviews() {
+    const list = document.querySelector('[data-review-list]');
+    if (!list) return;
+    if (!state.reviews.length) {
+        list.innerHTML = '<p class="review-empty">Chưa có đánh giá được duyệt. Hãy chia sẻ sau khi hoàn tất đơn hàng.</p>';
+        return;
+    }
+    const visibleCount = window.matchMedia('(max-width: 760px)').matches ? 1 : 3;
+    list.innerHTML = state.reviews.slice(0, visibleCount).map(review => `
+        <article class="review-card">
+            <div class="review-stars" aria-label="${Number(review.rating)} trên 5 sao">${'★'.repeat(Number(review.rating))}</div>
+            <p>${escapeHtml(review.review_text)}</p>
+            <footer><strong>${escapeHtml(review.customer_name)}</strong><span>${escapeHtml(review.product_name)}</span></footer>
+        </article>
+    `).join('');
 }
 
 function renderEmptyRail(container) {
@@ -411,7 +457,13 @@ function openCheckout(items, source) {
     `).join('');
     document.getElementById('checkout-total').textContent = formatMoney(total);
     document.getElementById('checkout-success').hidden = true;
-    document.getElementById('checkout-form').hidden = false;
+    const checkoutForm = document.getElementById('checkout-form');
+    checkoutForm.hidden = false;
+    if (state.customer) {
+        checkoutForm.elements.customer_name.value = state.customer.customer_name || '';
+        checkoutForm.elements.customer_phone.value = state.customer.customer_phone || '';
+        checkoutForm.elements.customer_address.value = state.customer.customer_address || '';
+    }
     setCheckoutMessage('');
     document.getElementById('checkout-modal').classList.add('active');
     document.getElementById('checkout-modal').setAttribute('aria-hidden', 'false');
@@ -453,7 +505,7 @@ async function submitCheckout(event) {
             payment_method: formData.get('payment_method'),
             note: formData.get('note')
         });
-        state.checkoutToken = '';
+        state.checkoutToken = (await apiGet('checkout-token')).checkout_token || '';
         if (state.checkoutSource === 'cart') {
             state.cart = [];
             renderCart();
@@ -467,6 +519,230 @@ async function submitCheckout(event) {
     } finally {
         button.disabled = false;
     }
+}
+
+function openCustomerArea() {
+    if (state.customer) {
+        openCustomerAccount();
+    } else {
+        const modal = document.getElementById('customer-auth-modal');
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        switchAuthMode('login');
+    }
+    toggleMobileNav(false);
+}
+
+function closeCustomerAuth() {
+    const modal = document.getElementById('customer-auth-modal');
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function switchAuthMode(mode) {
+    const login = mode === 'login';
+    document.querySelector('[data-customer-login]').hidden = !login;
+    document.querySelector('[data-customer-register]').hidden = login;
+    document.querySelectorAll('[data-auth-tab]').forEach(button => {
+        button.classList.toggle('active', button.dataset.authTab === mode);
+    });
+    document.getElementById('customer-auth-title').textContent = login ? 'Đăng nhập' : 'Tạo tài khoản';
+    document.querySelectorAll('[data-auth-message]').forEach(node => setInlineMessage(node, ''));
+}
+
+async function submitCustomerLogin(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const message = form.querySelector('[data-auth-message]');
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+        const data = await apiPost('customer-login', {
+            checkout_token: state.checkoutToken,
+            customer_phone: form.elements.customer_phone.value,
+            password: form.elements.password.value
+        });
+        state.customer = data.customer;
+        state.checkoutToken = data.checkout_token;
+        updateCustomerNavigation();
+        closeCustomerAuth();
+        await openCustomerAccount();
+    } catch (error) {
+        setInlineMessage(message, error.message || 'Không thể đăng nhập.', 'error');
+    } finally {
+        submit.disabled = false;
+    }
+}
+
+async function submitCustomerRegister(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const message = form.querySelector('[data-auth-message]');
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+        const data = await apiPost('customer-register', {
+            checkout_token: state.checkoutToken,
+            customer_name: form.elements.customer_name.value,
+            customer_phone: form.elements.customer_phone.value,
+            customer_address: form.elements.customer_address.value,
+            password: form.elements.password.value
+        });
+        state.customer = data.customer;
+        state.checkoutToken = data.checkout_token;
+        updateCustomerNavigation();
+        form.reset();
+        closeCustomerAuth();
+        await openCustomerAccount();
+    } catch (error) {
+        setInlineMessage(message, error.message || 'Không thể tạo tài khoản.', 'error');
+    } finally {
+        submit.disabled = false;
+    }
+}
+
+async function openCustomerAccount() {
+    if (!state.customer) {
+        openCustomerArea();
+        return;
+    }
+    const modal = document.getElementById('customer-account-modal');
+    const form = modal.querySelector('[data-customer-profile]');
+    form.elements.customer_name.value = state.customer.customer_name || '';
+    form.elements.customer_phone.value = state.customer.customer_phone || '';
+    form.elements.customer_address.value = state.customer.customer_address || '';
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    await loadCustomerOrders();
+}
+
+function closeCustomerAccount() {
+    const modal = document.getElementById('customer-account-modal');
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+async function submitCustomerProfile(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const message = form.querySelector('[data-profile-message]');
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+        const data = await apiPost('customer-profile-update', {
+            checkout_token: state.checkoutToken,
+            customer_name: form.elements.customer_name.value,
+            customer_address: form.elements.customer_address.value
+        });
+        state.customer = data.customer;
+        state.checkoutToken = data.checkout_token;
+        setInlineMessage(message, 'Đã lưu thông tin.', 'success');
+    } catch (error) {
+        setInlineMessage(message, error.message || 'Không thể lưu thông tin.', 'error');
+    } finally {
+        submit.disabled = false;
+    }
+}
+
+function orderStatusLabel(status) {
+    return ({
+        new: 'Mới',
+        confirmed: 'Đã xác nhận',
+        ordered: 'Đã đặt hàng',
+        received: 'Đã nhận hàng',
+        ready: 'Sẵn sàng giao',
+        done: 'Hoàn tất',
+        cancelled: 'Đã hủy'
+    })[status] || status;
+}
+
+function renderCustomerOrders() {
+    const root = document.querySelector('[data-customer-orders]');
+    if (!root) return;
+    if (!state.customerOrders.length) {
+        root.innerHTML = '<p class="account-empty">Bạn chưa có đơn hàng nào.</p>';
+        return;
+    }
+    root.innerHTML = state.customerOrders.map(order => `
+        <article class="account-order">
+            <header>
+                <div><strong>${escapeHtml(order.order_id)}</strong><small>${escapeHtml(order.created_at)}</small></div>
+                <span class="order-status">${escapeHtml(orderStatusLabel(order.status))}</span>
+            </header>
+            <div class="account-order-items">
+                ${(order.items || []).map(item => `
+                    <div class="account-order-line">
+                        <span>${escapeHtml(item.product_name_snapshot)} · ${escapeHtml(item.uom_label_snapshot)} × ${escapeHtml(item.qty_uom)}</span>
+                        <strong>${formatMoney(item.line_total_vnd)}</strong>
+                    </div>
+                    ${order.status === 'done' && !item.review_status ? `
+                        <form class="review-form" onsubmit="submitProductReview(event)" data-order-id="${escapeHtml(order.order_id)}" data-product-id="${escapeHtml(item.product_id)}">
+                            <select name="rating" aria-label="Điểm đánh giá">
+                                <option value="5">5 sao</option><option value="4">4 sao</option>
+                                <option value="3">3 sao</option><option value="2">2 sao</option><option value="1">1 sao</option>
+                            </select>
+                            <input name="review_text" minlength="10" maxlength="1000" placeholder="Chia sẻ cảm nhận của bạn" required>
+                            <button class="btn-secondary" type="submit">Gửi đánh giá</button>
+                            <small data-review-message></small>
+                        </form>` : ''}
+                    ${item.review_status ? `<small class="review-submitted">Đánh giá: ${escapeHtml(item.review_status === 'approved' ? 'đã duyệt' : item.review_status === 'rejected' ? 'đã từ chối' : 'đang chờ duyệt')}</small>` : ''}
+                `).join('')}
+            </div>
+            <footer><span>Tổng thanh toán</span><strong>${formatMoney(order.total_vnd)}</strong></footer>
+        </article>
+    `).join('');
+}
+
+async function loadCustomerOrders() {
+    const root = document.querySelector('[data-customer-orders]');
+    if (!root) return;
+    root.innerHTML = '<p class="account-empty">Đang tải đơn hàng...</p>';
+    try {
+        const data = await apiGet('customer-orders');
+        state.customerOrders = data.items || [];
+        renderCustomerOrders();
+    } catch (error) {
+        root.innerHTML = `<p class="account-empty">${escapeHtml(error.message || 'Không thể tải đơn hàng.')}</p>`;
+    }
+}
+
+async function submitProductReview(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const message = form.querySelector('[data-review-message]');
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+        const data = await apiPost('review-create', {
+            checkout_token: state.checkoutToken,
+            order_id: form.dataset.orderId,
+            product_id: form.dataset.productId,
+            rating: Number(form.elements.rating.value),
+            review_text: form.elements.review_text.value
+        });
+        state.checkoutToken = data.checkout_token;
+        message.textContent = data.message;
+        form.elements.review_text.value = '';
+    } catch (error) {
+        message.textContent = error.message || 'Không thể gửi đánh giá.';
+    } finally {
+        submit.disabled = false;
+    }
+}
+
+async function logoutCustomer() {
+    try {
+        const data = await apiPost('customer-logout', { checkout_token: state.checkoutToken });
+        state.checkoutToken = data.checkout_token;
+    } catch (error) {
+        toast(error.message || 'Không thể đăng xuất.', 'error');
+        return;
+    }
+    state.customer = null;
+    state.customerOrders = [];
+    updateCustomerNavigation();
+    closeCustomerAccount();
+    toast('Đã đăng xuất.');
 }
 
 const SECTION_IDS = ['ch1', 'ch2', 'ch3', 'ch4'];
@@ -584,16 +860,25 @@ function toggleMobileNav(forceOpen) {
 async function initStorefront() {
     renderCart();
     try {
-        const [catalog, token, settings] = await Promise.all([
+        const [catalog, token, settings, customerSession, bestSellers, reviews] = await Promise.all([
             apiGet('catalog'),
             apiGet('checkout-token'),
-            apiGet('settings').catch(() => ({}))
+            apiGet('settings').catch(() => ({})),
+            apiGet('customer-session').catch(() => ({ authenticated: false, customer: null })),
+            apiGet('best-sellers').catch(() => ({ items: [] })),
+            apiGet('reviews-public').catch(() => ({ items: [] }))
         ]);
         state.products = catalog.items || [];
         state.checkoutToken = token.checkout_token || '';
         state.settings = settings || {};
+        state.customer = customerSession.authenticated ? customerSession.customer : null;
+        state.bestSellers = bestSellers.items || [];
+        state.reviews = reviews.items || [];
         renderCatalog();
         renderStoreContact();
+        renderBestSellers();
+        renderPublicReviews();
+        updateCustomerNavigation();
     } catch (error) {
         renderRail('gialai-products', []);
         renderRail('binhdinh-products', []);
@@ -605,6 +890,8 @@ document.addEventListener('keydown', event => {
     if (event.key === 'Escape') {
         closeModal();
         closeCheckout();
+        closeCustomerAuth();
+        closeCustomerAccount();
         toggleCart(false);
         toggleMobileNav(false);
     }

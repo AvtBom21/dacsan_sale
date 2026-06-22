@@ -15,6 +15,7 @@ $titles = [
     'inventory-lot' => 'Chi tiết lot kho',
     'purchase-plans' => 'Purchase Plan',
     'purchase-plan-detail' => 'Chi tiết Purchase Plan',
+    'reviews' => 'Đánh giá khách hàng',
     'settings' => 'Cài đặt',
     'admin-users' => 'Tài khoản quản trị',
 ];
@@ -68,6 +69,9 @@ $adminJsVersion = (string) (filemtime(dirname(__DIR__, 2) . '/public/assets/js/a
             <?php endif; ?>
             <?php if (($capabilities['purchase_plans'] ?? false) === true): ?>
                 <a href="./?page=purchase-plans" class="<?= $activePage === 'purchase-plans' ? 'active' : '' ?>">PO</a>
+            <?php endif; ?>
+            <?php if (($capabilities['reviews'] ?? false) === true): ?>
+                <a href="./?page=reviews" class="<?= $activePage === 'reviews' ? 'active' : '' ?>">Đánh giá</a>
             <?php endif; ?>
             <?php if (($capabilities['settings'] ?? false) === true): ?>
                 <a href="./?page=settings" class="<?= $activePage === 'settings' ? 'active' : '' ?>">Cài đặt</a>

@@ -12,14 +12,17 @@ use DacSanNhaDan\Repositories\InventoryRepository;
 use DacSanNhaDan\Repositories\OrderRepository;
 use DacSanNhaDan\Repositories\ProductRepository;
 use DacSanNhaDan\Repositories\PurchasePlanRepository;
+use DacSanNhaDan\Repositories\ReviewRepository;
 use DacSanNhaDan\Repositories\SettingRepository;
 use DacSanNhaDan\Repositories\ShippingRepository;
 use DacSanNhaDan\Services\CartQuoteService;
 use DacSanNhaDan\Services\CatalogService;
 use DacSanNhaDan\Services\CheckoutService;
+use DacSanNhaDan\Services\CustomerAuthService;
 use DacSanNhaDan\Services\InventoryService;
 use DacSanNhaDan\Services\OrderService;
 use DacSanNhaDan\Services\PurchasePlanService;
+use DacSanNhaDan\Services\ReviewService;
 use DacSanNhaDan\Services\SettingsService;
 use DacSanNhaDan\Services\ShippingService;
 use DacSanNhaDan\Support\DatabaseBaseline;
@@ -74,6 +77,7 @@ try {
     $customerRepository = new CustomerRepository($pdo);
     $orderRepository = new OrderRepository($pdo);
     $purchasePlanRepository = new PurchasePlanRepository($pdo);
+    $reviewRepository = new ReviewRepository($pdo);
 
     $settingsService = new SettingsService($settingRepository);
     $catalogService = new CatalogService($productRepository, $inventoryRepository);
@@ -93,6 +97,98 @@ try {
         $customerRepository,
         $orderRepository
     );
+    $customerAuth = new CustomerAuthService($customerRepository);
+    $reviewService = new ReviewService($reviewRepository);
+
+    if ($action === 'customer-session') {
+        api_require_method('GET');
+        $customer = $customerAuth->customer();
+        Response::ok([
+            'authenticated' => $customer !== null,
+            'customer' => $customer,
+            'checkout_token' => Csrf::checkoutToken(),
+        ]);
+        return;
+    }
+
+    if ($action === 'customer-register') {
+        api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireCheckoutToken((string) ($body['checkout_token'] ?? ''));
+        Response::ok([
+            'customer' => $customerAuth->register($body),
+            'checkout_token' => Csrf::regenerateCheckoutToken(),
+        ]);
+        return;
+    }
+
+    if ($action === 'customer-login') {
+        api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireCheckoutToken((string) ($body['checkout_token'] ?? ''));
+        Response::ok([
+            'customer' => $customerAuth->login($body),
+            'checkout_token' => Csrf::regenerateCheckoutToken(),
+        ]);
+        return;
+    }
+
+    if ($action === 'customer-profile-update') {
+        api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireCheckoutToken((string) ($body['checkout_token'] ?? ''));
+        Response::ok([
+            'customer' => $customerAuth->updateProfile($body),
+            'checkout_token' => Csrf::regenerateCheckoutToken(),
+        ]);
+        return;
+    }
+
+    if ($action === 'customer-logout') {
+        api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireCheckoutToken((string) ($body['checkout_token'] ?? ''));
+        $customerAuth->logout();
+        Response::ok([
+            'message' => 'Đã đăng xuất.',
+            'checkout_token' => Csrf::regenerateCheckoutToken(),
+        ]);
+        return;
+    }
+
+    if ($action === 'customer-orders') {
+        api_require_method('GET');
+        $customer = $customerAuth->requireCustomer();
+        Response::ok([
+            'items' => $orderRepository->findOrdersByCustomerId((int) $customer['customer_id']),
+        ]);
+        return;
+    }
+
+    if ($action === 'review-create') {
+        api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireCheckoutToken((string) ($body['checkout_token'] ?? ''));
+        $customer = $customerAuth->requireCustomer();
+        Response::ok(array_merge(
+            $reviewService->create((int) $customer['customer_id'], $body),
+            ['checkout_token' => Csrf::regenerateCheckoutToken()]
+        ));
+        return;
+    }
+
+    if ($action === 'reviews-public') {
+        api_require_method('GET');
+        Response::ok(['items' => $reviewService->publicPositive()]);
+        return;
+    }
+
+    if ($action === 'best-sellers') {
+        api_require_method('GET');
+        $items = $catalogService->bestSellers(3);
+        Response::ok(['items' => $items, 'count' => count($items)]);
+        return;
+    }
 
     if ($action === 'settings') {
         Response::ok($settingsService->publicSettings());
@@ -150,7 +246,12 @@ try {
 
     if ($action === 'checkout') {
         api_require_method('POST');
-        Response::ok($checkoutService->checkout(Request::json()));
+        $body = Request::json();
+        $customer = $customerAuth->customer();
+        if ($customer !== null) {
+            $body['_authenticated_customer_id'] = (int) $customer['customer_id'];
+        }
+        Response::ok($checkoutService->checkout($body));
         return;
     }
 

@@ -16,12 +16,14 @@ use DacSanNhaDan\Repositories\InventoryRepository;
 use DacSanNhaDan\Repositories\OrderRepository;
 use DacSanNhaDan\Repositories\ProductRepository;
 use DacSanNhaDan\Repositories\PurchasePlanRepository;
+use DacSanNhaDan\Repositories\ReviewRepository;
 use DacSanNhaDan\Repositories\SettingRepository;
 use DacSanNhaDan\Repositories\ShippingRepository;
 use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
 use DacSanNhaDan\Services\AdminInventoryService;
 use DacSanNhaDan\Services\AdminProductService;
+use DacSanNhaDan\Services\AdminReviewService;
 use DacSanNhaDan\Services\AdminSettingsService;
 use DacSanNhaDan\Services\AdminUserService;
 use DacSanNhaDan\Services\AdminService;
@@ -49,6 +51,7 @@ try {
     $adminInventory = new AdminInventoryService($pdo, $inventoryRepository);
     $adminSettings = new AdminSettingsService($pdo, new AdminSettingsRepository($pdo));
     $adminUsers = new AdminUserService($pdo, new AdminUserRepository($pdo));
+    $adminReviews = new AdminReviewService(new ReviewRepository($pdo));
     $uploads = new UploadService(dirname(__DIR__, 2));
 
     if ($action === '' || $action === 'health') {
@@ -423,6 +426,24 @@ try {
         return;
     }
 
+    if ($action === 'review-list') {
+        admin_api_require_method('GET');
+        Response::ok($adminReviews->page(trim((string) ($_GET['status'] ?? ''))));
+        return;
+    }
+
+    if ($action === 'review-moderate') {
+        admin_api_require_method('POST');
+        $body = Request::json();
+        Csrf::requireAdminToken(admin_api_csrf($body));
+        Response::ok($adminReviews->moderate(
+            $body['review_id'] ?? null,
+            admin_api_body_string($body, 'status'),
+            (int) $user['admin_id']
+        ));
+        return;
+    }
+
     if ($action === 'po-mark-ordered') {
         admin_api_require_method('POST');
         $body = Request::json();
@@ -505,6 +526,8 @@ function admin_api_action_permission(string $action): ?string
         'admin-user-create' => 'admin_users.manage',
         'admin-user-update' => 'admin_users.manage',
         'admin-user-password' => 'admin_users.manage',
+        'review-list' => 'reviews.view',
+        'review-moderate' => 'reviews.manage',
     ];
 
     return $permissions[$action] ?? null;

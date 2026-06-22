@@ -13,10 +13,12 @@ use DacSanNhaDan\Repositories\AdminUserRepository;
 use DacSanNhaDan\Repositories\InventoryRepository;
 use DacSanNhaDan\Repositories\OrderRepository;
 use DacSanNhaDan\Repositories\PurchasePlanRepository;
+use DacSanNhaDan\Repositories\ReviewRepository;
 use DacSanNhaDan\Services\AdminAuthorizationService;
 use DacSanNhaDan\Services\AdminAuthService;
 use DacSanNhaDan\Services\AdminInventoryService;
 use DacSanNhaDan\Services\AdminProductService;
+use DacSanNhaDan\Services\AdminReviewService;
 use DacSanNhaDan\Services\AdminSettingsService;
 use DacSanNhaDan\Services\AdminUserService;
 use DacSanNhaDan\Services\AdminService;
@@ -41,6 +43,7 @@ function admin_page_permissions(): array
         'inventory-lot' => 'inventory.view',
         'purchase-plans' => 'purchase_plans.view',
         'purchase-plan-detail' => 'purchase_plans.view',
+        'reviews' => 'reviews.view',
         'settings' => 'settings.view',
         'admin-users' => 'admin_users.manage',
     ];
@@ -113,6 +116,7 @@ function admin_navigation_capabilities(
         'products' => $authorization->allows($role, 'products.view'),
         'inventory' => $authorization->allows($role, 'inventory.view'),
         'purchase_plans' => $authorization->allows($role, 'purchase_plans.view'),
+        'reviews' => $authorization->allows($role, 'reviews.view'),
         'settings' => $authorization->allows($role, 'settings.view'),
         'admin_users' => $authorization->allows($role, 'admin_users.manage'),
         'orders_transition' => $authorization->allows($role, 'orders.transition'),
@@ -121,6 +125,7 @@ function admin_navigation_capabilities(
         'settings_manage' => $authorization->allows($role, 'settings.manage'),
         'inventory_manage' => $authorization->allows($role, 'inventory.manage'),
         'purchase_plans_manage' => $authorization->allows($role, 'purchase_plans.manage'),
+        'reviews_manage' => $authorization->allows($role, 'reviews.manage'),
     ];
 }
 
@@ -139,6 +144,7 @@ try {
     $adminInventory = new AdminInventoryService($pdo, new InventoryRepository($pdo));
     $adminSettings = new AdminSettingsService($pdo, new AdminSettingsRepository($pdo));
     $adminUsers = new AdminUserService($pdo, new AdminUserRepository($pdo));
+    $adminReviews = new AdminReviewService(new ReviewRepository($pdo));
     $inventoryService = new InventoryService(new InventoryRepository($pdo));
     $purchasePlans = new PurchasePlanService(
         $pdo,
@@ -187,7 +193,8 @@ try {
         $adminInventory,
         $purchasePlans,
         $adminSettings,
-        $adminUsers
+        $adminUsers,
+        $adminReviews
     );
     $capabilities = admin_navigation_capabilities($authorization, $role);
     $csrfToken = Csrf::adminToken();
@@ -228,7 +235,8 @@ function admin_page_data(
     ?AdminInventoryService $adminInventory = null,
     ?PurchasePlanService $purchasePlans = null,
     ?AdminSettingsService $adminSettings = null,
-    ?AdminUserService $adminUsers = null
+    ?AdminUserService $adminUsers = null,
+    ?AdminReviewService $adminReviews = null
 ): array
 {
     return match ($page) {
@@ -242,6 +250,8 @@ function admin_page_data(
         'product-form' => admin_product_form_data($adminProducts, $pageId),
         'inventory-lot' => admin_inventory_lot_data($adminInventory, $pageId),
         'purchase-plan-detail' => admin_purchase_plan_detail_data($purchasePlans, $pageId),
+        'reviews' => $adminReviews?->page(trim((string) ($_GET['status'] ?? '')))
+            ?? ['reviews' => [], 'status' => ''],
         'admin-users' => $adminUsers?->page() ?? ['users' => [], 'roles' => []],
         default => $admin->dashboard(),
     };

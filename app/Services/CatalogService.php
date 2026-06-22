@@ -89,6 +89,33 @@ final class CatalogService
         return $this->buildProductPayload($product, $uoms, $images, $stock);
     }
 
+    /** @return array<int, array<string, mixed>> */
+    public function bestSellers(int $limit = 3): array
+    {
+        $ranked = $this->products->bestSellers($limit);
+        $catalogById = [];
+        foreach ($this->catalog() as $product) {
+            $catalogById[(string) $product['product_id']] = $product;
+        }
+
+        $items = [];
+        foreach ($ranked as $rank) {
+            $productId = (string) $rank['product_id'];
+            if (!isset($catalogById[$productId])) {
+                continue;
+            }
+            $product = $catalogById[$productId];
+            $product['sold_qty'] = (float) $rank['sold_qty'];
+            $items[] = $product;
+        }
+
+        if ($items === []) {
+            $items = array_slice(array_values($catalogById), 0, $limit);
+        }
+
+        return $items;
+    }
+
     /**
      * @return array<string, mixed>|array<int, array<string, mixed>>|null
      */

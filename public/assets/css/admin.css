@@ -143,6 +143,32 @@ textarea {
     color: #991b1b;
 }
 
+.status-pill[data-status="pending"] {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-pill[data-status="approved"] {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-pill[data-status="rejected"] {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.review-rating {
+    color: #d97706;
+    white-space: nowrap;
+}
+
+.review-content {
+    min-width: 220px;
+    margin: 0 0 6px;
+    line-height: 1.5;
+}
+
 .detail-grid,
 .form-grid {
     display: grid;

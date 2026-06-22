@@ -187,6 +187,43 @@
             return;
         }
 
+        const reviewButton = event.target.closest('[data-review-moderate]');
+        if (reviewButton) {
+            const reviewId = Number(reviewButton.getAttribute('data-review-id') || 0);
+            const status = reviewButton.getAttribute('data-review-moderate') || '';
+            const approved = status === 'approved';
+            if (
+                !reviewId
+                || !['approved', 'rejected'].includes(status)
+                || !await confirmAction(
+                    approved ? 'Duyệt đánh giá?' : 'Từ chối đánh giá?',
+                    approved
+                        ? 'Đánh giá từ 4 sao sẽ có thể xuất hiện trên trang mua hàng.'
+                        : 'Đánh giá này sẽ không hiển thị công khai.',
+                    !approved
+                )
+            ) {
+                return;
+            }
+
+            reviewButton.disabled = true;
+            try {
+                await adminRequest('review-moderate', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        review_id: reviewId,
+                        status,
+                    }),
+                });
+                await showMessage('success', 'Đã cập nhật', 'Trạng thái đánh giá đã được lưu.');
+                window.location.reload();
+            } catch (error) {
+                await showMessage('error', 'Không thể cập nhật', error.message || 'Không thể cập nhật đánh giá.');
+                reviewButton.disabled = false;
+            }
+            return;
+        }
+
         const statusButton = event.target.closest('[data-order-status]');
         if (!statusButton) {
             return;

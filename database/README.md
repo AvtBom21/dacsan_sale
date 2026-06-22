@@ -5,6 +5,7 @@ This folder contains the current core MySQL/MariaDB schema and seed baseline for
 ## Files
 
 - `database.sql`: current schema and seed baseline used by the app.
+- `migrations/20260622_customer_accounts_reviews.sql`: non-destructive upgrade for customer accounts and product reviews.
 - `README.md`: database setup and verification notes.
 
 ## Create And Import Database
@@ -65,7 +66,7 @@ Do not hard-code production passwords. Use environment variables such as `DB_HOS
 
 Expected core database objects:
 
-- 18 base tables
+- 19 base tables
 - 2 views
 
 Verify manually in MySQL:

@@ -200,4 +200,43 @@ final class OrderRepository
 
         return $statement->fetchAll();
     }
+
+    /** @return array<int, array<string, mixed>> */
+    public function findOrdersByCustomerId(int $customerId, int $limit = 30): array
+    {
+        $limit = max(1, min($limit, 50));
+        $statement = $this->pdo->prepare(
+            "SELECT o.order_id, o.created_at, o.STATUS AS status, o.customer_name,
+                    o.customer_phone, o.customer_address, o.receive_date,
+                    o.shipping_method, o.shipping_fee_vnd, o.subtotal_vnd,
+                    o.total_vnd, o.source_summary
+             FROM orders o
+             WHERE o.customer_id = :customer_id
+             ORDER BY o.created_at DESC, o.order_id DESC
+             LIMIT $limit"
+        );
+        $statement->execute(['customer_id' => $customerId]);
+        $orders = $statement->fetchAll();
+
+        foreach ($orders as &$order) {
+            $items = $this->pdo->prepare(
+                'SELECT oi.*, r.review_id, r.status AS review_status
+                 FROM order_items oi
+                 LEFT JOIN product_reviews r
+                   ON r.order_id = oi.order_id
+                  AND r.product_id = oi.product_id
+                  AND r.customer_id = :customer_id
+                 WHERE oi.order_id = :order_id
+                 ORDER BY oi.line_no'
+            );
+            $items->execute([
+                'customer_id' => $customerId,
+                'order_id' => (string) $order['order_id'],
+            ]);
+            $order['items'] = $items->fetchAll();
+        }
+        unset($order);
+
+        return $orders;
+    }
 }
